@@ -42,11 +42,6 @@ TrevorC2 is a client/server model for masking command and control through a norm
        ,;    :      :MMMMMMM:;.     :    '.       
       :'     :    ,MM'''""''':M:    :     ';       
      ;'      :    ;M'         MM.   :       ;.     
-   ,'        :    "            "'   :        '.   
-   '        :'                       '        ''   
- .          :                        '          ' 
-'          ;                          ;          ' 
-          ;                            ' 
 
 There are two components to TrevorC2 - the client and the server. The client can be configured to be used with anything. In this example it's coded in Python but can easily be ported to C#, PowerShell, or whatever you want. Currently the trevorc2_client.py supports Windows, MacOS, and Linux. You can always byte compile the Windows one to get an executable, but preference would be to use Windows without having to drop an executable as a stager.
 
