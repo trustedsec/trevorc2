@@ -1,0 +1,5 @@
+~~~~~~~~~~~~~~~~
+version 0.1a
+~~~~~~~~~~~~~~~~
+
+* initial release of TrevorC2
