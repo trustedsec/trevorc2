@@ -10,6 +10,9 @@
 # to be decoded by the client and executed and then passed back to the server
 # via a query string parameter. 
 
+# URL to clone to house a legitimate website
+url = ("https://www.google.com")
+
 # CONFIG OPTIONS
 user_agent = ("User-Agent: Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko")
 
@@ -182,7 +185,7 @@ if __name__ == "__main__":
     print("TrevorC2 - Legitimate Website Covert Channel")
     print("Written by: David Kennedy (@HackingDave)")
     print("https://www.trustedsec.com")
-    clone_site(user_agent, "https://www.trustedsec.com")
+    clone_site(user_agent, url)
     print("[*] Kicking off web server in thread...")
     thread.start_new_thread(main, ())
     print("[*] Web server started...")
