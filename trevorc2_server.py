@@ -64,7 +64,12 @@ logging.basicConfig(level=logging.CRITICAL, format='[%(asctime)s] %(message)s', 
 log = logging.getLogger(__name__)
 
 __author__ = 'Dave Kennedy (@HackingDave)'
-__version__ = 0.3
+__version__ = 0.3.1
+
+# ROOT CHECK
+if os.geteuid() != 0:
+    print("\n[!] TrevorC2 needs to be run as root (web socket binding, etc.)... Re-run TrevorC2 as sudo/root in order to run.")
+    sys.exit()
 
 # AESCipher Library Python2/3 support
 class AESCipher(object):
