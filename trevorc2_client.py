@@ -45,6 +45,7 @@ from Crypto import Random
 from Crypto.Cipher import AES
 import sys
 
+# AES Support for Python2/3 - http://depado.markdownblog.com/2015-05-11-aes-cipher-with-python-3-x
 class AESCipher(object):
     """
     A classical AES Cipher. Can use any size of data and any size of password thanks to padding.

@@ -71,7 +71,7 @@ if os.geteuid() != 0:
     print("\n[!] TrevorC2 needs to be run as root (web socket binding, etc.)... Re-run TrevorC2 as sudo/root in order to run.")
     sys.exit()
 
-# AESCipher Library Python2/3 support
+# AESCipher Library Python2/3 support - http://depado.markdownblog.com/2015-05-11-aes-cipher-with-python-3-x
 class AESCipher(object):
     """
     A classical AES Cipher. Can use any size of data and any size of password thanks to padding.
