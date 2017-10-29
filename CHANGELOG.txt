@@ -6,6 +6,8 @@ version 0.3
 * add root path query which allows you to change the file/location where the code is contained within trevorc2
 * add full support for Python2/3 AES support for encrypted transfer of data
 * fix control-c from exiting properly, kill process
+* couple minor fixes for python3 compatibility
+* update requirements.txt for pycrypto
 
 ~~~~~~~~~~~~~~~~
 version 0.2
