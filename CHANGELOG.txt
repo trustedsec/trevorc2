@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 0.2
+~~~~~~~~~~~~~~~~
+
+* added SSL, python v2/3 compatibility, multi-shell support, and encryption (thanks to the awesome PR from Nicholas Albright @nma_io).
+
+~~~~~~~~~~~~~~~~
 version 0.1a
 ~~~~~~~~~~~~~~~~
 

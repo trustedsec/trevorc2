@@ -1,0 +1,1 @@
+Special thanks to Nicholas Albright @nma_io for the encryption, SSL, threading, multi-shell support.
