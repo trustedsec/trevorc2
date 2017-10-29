@@ -1,4 +1,13 @@
 ~~~~~~~~~~~~~~~~
+version 0.3
+~~~~~~~~~~~~~~~~
+
+* uppercase variable names through client
+* add root path query which allows you to change the file/location where the code is contained within trevorc2
+* add full support for Python2/3 AES support for encrypted transfer of data
+* fix control-c from exiting properly, kill process
+
+~~~~~~~~~~~~~~~~
 version 0.2
 ~~~~~~~~~~~~~~~~
 

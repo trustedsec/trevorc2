@@ -66,9 +66,7 @@ python trevor2_client.py
 
 ## TODO
 
-#### Add encryption (AES).
-#### Add randomized parameter names.
+#### Add ability for longer than 2048 data output. Query string parameter length limited size length.
 #### Add a C# and PowerShell module.
 #### Add do_POST support for POST exfil on longer data.
 #### Add upload/download functionality.
-#### Add multi-threading for multiple shells

