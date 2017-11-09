@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 0.3.2
+~~~~~~~~~~~~~~~~
+
+* change padding to 16 bit to be compatible with PowerShell native. New PS client coming soon.
+
+~~~~~~~~~~~~~~~~
 version 0.3.1
 ~~~~~~~~~~~~~~~~
 

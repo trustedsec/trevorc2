@@ -52,7 +52,7 @@ class AESCipher(object):
     Also ensure the coherence and the type of the data with a unicode to byte converter.
     """
     def __init__(self, key):
-        self.bs = 32
+        self.bs = 16
         self.key = hashlib.sha256(AESCipher.str_to_bytes(key)).digest()
 
     @staticmethod
