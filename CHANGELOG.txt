@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 0.4
+~~~~~~~~~~~~~~~~
+
+* add PowerShell client thanks to Alex Williams (@offsec_ginger)
+
+~~~~~~~~~~~~~~~~
 version 0.3.2
 ~~~~~~~~~~~~~~~~
 
