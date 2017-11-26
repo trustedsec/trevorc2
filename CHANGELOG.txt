@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 0.6
+~~~~~~~~~~~~~~~~
+
+* adds full session management for multiple TrevorC2 clients
+
+~~~~~~~~~~~~~~~~
 version 0.5
 ~~~~~~~~~~~~~~~~
 

