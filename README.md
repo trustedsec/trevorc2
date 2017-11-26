@@ -49,6 +49,7 @@ The way that the server works is by tucking away a parameter thats right before 
 
     1. trevor2_server.py - edit the file first, and customize, what website you want to clone, etc. The server will clone a website of your choosing and stand up a server. This server is browsable by anyone and looks like a legitimate website. Contained within the source is parameter that (again is configurable), which contains the instructions for the client. Once a client connects, it searches for that parameter, then uses it to execute commands.
     2. trevor2_client.py - all you need in any configurable option is the ability to call out to a website, parse some basic data, and then execute a command and then put the results in a base64 encoded query string parameter to the site. That's it, not hard. 
+    3. trevor2_client.ps1 - powershell implementation of trevor2_client.py, this allows you to use native PowerShell to interact with Trevor2_Server.
 
 ## Installation
 
@@ -60,9 +61,9 @@ First edit the trevor2_server.py - change the configuration options and site to 
 
 python trevor2_server.py
 
-Next, edit the trevor2_client.py - change the configuration and system you want it to communicate back to. 
+Next, edit the trevor2_client.py or ps1 - change the configuration and system you want it to communicate back to. 
 
-python trevor2_client.py
+python trevor2_client.py or .\trevor2_client.ps1
 
 ## Session Management
 
