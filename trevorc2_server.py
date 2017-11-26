@@ -64,7 +64,7 @@ logging.basicConfig(level=logging.CRITICAL, format='[%(asctime)s] %(message)s', 
 log = logging.getLogger(__name__)
 
 __author__ = 'Dave Kennedy (@HackingDave)'
-__version__ = 0.4
+__version__ = 0.5
 
 # ROOT CHECK
 if os.geteuid() != 0:
@@ -144,6 +144,7 @@ def clone_site(user_agent, url):
         print("[!] Unable to clone the site. Status Code: %s" % web_request.status_code)
         print("[!] Exiting TrevorC2...")
         sys.exit()
+
     with open("clone_site/index.html", 'wb') as fh:
         fh.write(web_request.content)
 
@@ -215,16 +216,22 @@ def main_c2():
         (SITE_PATH_QUERY, SPQ),
         (r'/.*', UnknownPageHandler)  # Make this the last line, if not matched, will hit this rule.
     ])
-    if SSL:
-        http_server = tornado.httpserver.HTTPServer(
-            application, ssl_options={'certfile': CERT_FILE, 'ssl_version': ssl.PROTOCOL_TLSv1})
-        http_server.listen(443)
-        tornado.ioloop.IOLoop.instance().start()
-    else:
-        http_server = tornado.httpserver.HTTPServer(application)
-        http_server.listen(80)
-        tornado.ioloop.IOLoop.instance().start()
 
+    try:
+        if SSL:
+            http_server = tornado.httpserver.HTTPServer(
+                application, ssl_options={'certfile': CERT_FILE, 'ssl_version': ssl.PROTOCOL_TLSv1})
+            http_server.listen(443)
+            tornado.ioloop.IOLoop.instance().start()
+        else:
+            http_server = tornado.httpserver.HTTPServer(application)
+            http_server.listen(80)
+            tornado.ioloop.IOLoop.instance().start()
+
+    except Exception as e:
+        if "Address already in use" in str(e):
+            print("[!] Something is already listening on the port. Stop the service and try again (hint service apache2 stop).")
+            os._exit(1) # need os._exit() vs sys.exit due to inside of thread
 
 if __name__ == "__main__":
 
@@ -276,7 +283,7 @@ if __name__ == "__main__":
     print("https://www.trustedsec.com")
     clone_site(USER_AGENT, URL)
     PYTHONVER = sys.version_info[0]
-    print('[*] Starting C2 Server...')
+    print('[*] Starting Trevor C2 Server...')
     threading.Thread(target=main_c2).start()
 
     # here we say no instructions to the client

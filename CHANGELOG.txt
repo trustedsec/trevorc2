@@ -1,4 +1,11 @@
 ~~~~~~~~~~~~~~~~
+version 0.5
+~~~~~~~~~~~~~~~~
+
+* moved trevorc2_client.py to python 2 and 3 compatible
+* added error handling if server address was in use in trevorc2_server
+
+~~~~~~~~~~~~~~~~
 version 0.4
 ~~~~~~~~~~~~~~~~
 
