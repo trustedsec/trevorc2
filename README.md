@@ -68,7 +68,9 @@ python trevor2_client.py
 
 TrevorC2 supports the ability to handle multiple shells coming from different hostnames. The way TrevorC2 works is it will identify new hostnames as sessions. You can interact with the sessions once you execute a command. If you have multiple sessions, you can type a command and interact with that session based on the session number stored globally. Example below:
 
-```root@stronghold:/home/relik/Desktop/git/trevorc2# python trevorc2_server.py 
+```
+
+root@stronghold:/home/relik/Desktop/git/trevorc2# python trevorc2_server.py 
 
 TrevorC2 - Legitimate Website Covert Channel
 Written by: David Kennedy (@HackingDave)
