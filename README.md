@@ -147,6 +147,18 @@ stronghold:trevorc2>back
 trevorc2>exit
 [*] Exiting TrevorC2... 
 ```
+
+## Dockerfile
+Uses an alpine-based Dockerfile to deploy trevorC2, handy for quick deployement on cloud providers.  
+Example below:
+
+```bash
+git clone https://github.com/trustedsec/trevorc2.git
+cd trevorc2
+# At this point, setting up docker-machine to remotly deploy works great
+docker build -t trevorc2 . 
+docker run -it -p 80:80 -p 443:443 trevorc2
+```
 ## TODO
 
 #### Add ability for longer than 2048 data output. Query string parameter length limited size length.
