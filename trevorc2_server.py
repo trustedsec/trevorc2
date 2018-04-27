@@ -57,6 +57,12 @@ import hashlib
 from Crypto import Random
 from Crypto.Cipher import AES
 
+# asyncio is python3 only - only needed for python3 regardless for tornado fix
+python_version = ("")
+try: import asyncio
+except ImportError: python_version = "v2"
+
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.getLogger("tornado.general").setLevel(logging.CRITICAL)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
@@ -238,19 +244,23 @@ def main_c2():
 
     try:
         if SSL:
-            http_server = tornado.httpserver.HTTPServer(
-                application, ssl_options={'certfile': CERT_FILE, 'ssl_version': ssl.PROTOCOL_TLSv1})
+            http_server = tornado.httpserver.HTTPServer(application, ssl_options={'certfile': CERT_FILE, 'ssl_version': ssl.PROTOCOL_TLSv1})
             http_server.listen(443)
             tornado.ioloop.IOLoop.instance().start()
         else:
+            # if we are using pythonv3+
+            if python_version != "v2": asyncio.set_event_loop(asyncio.new_event_loop())
             http_server = tornado.httpserver.HTTPServer(application)
             http_server.listen(80)
             tornado.ioloop.IOLoop.instance().start()
+            http.start()
 
     except Exception as e:
         if "Address already in use" in str(e):
             print("[!] Something is already listening on the port. Stop the service and try again (hint service apache2 stop).")
             os._exit(1) # need os._exit() vs sys.exit due to inside of thread
+        else:
+            print("[!] Something went wrong, printing error message here: " + str(e))
 
 if __name__ == "__main__":
 
