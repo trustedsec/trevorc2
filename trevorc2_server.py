@@ -44,15 +44,22 @@ import sys
 import time
 import glob
 import base64
-import bleach
+try: import bleach
+except ImportError:
+    print("[!] Python module bleach not installed. Try pip install bleach and re-run TrevorC2 Server.")
+    sys.exit()
 import shutil
 import logging
 import urllib3
 import requests
 import threading
-import tornado.web
-import tornado.ioloop
-import tornado.httpserver
+try:
+    import tornado.web
+    import tornado.ioloop
+    import tornado.httpserver
+except ImportError:
+    print("[!] Python module tornado not installed. Try pip install tornado and re-run TrevorC2 Server.")
+    sys.exit()
 import hashlib
 from Crypto import Random
 from Crypto.Cipher import AES

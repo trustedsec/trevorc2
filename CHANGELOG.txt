@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 0.9
+~~~~~~~~~~~~~~~~
+
+* add error handling to import modules
+
+~~~~~~~~~~~~~~~~
 version 0.8
 ~~~~~~~~~~~~~~~~
 
