@@ -1,4 +1,11 @@
 ~~~~~~~~~~~~~~~~
+version 1.0
+~~~~~~~~~~~~~~~~
+
+* added automatic default website for when using TrevorC2 if no connection available (i.e. cant clone website) - will spawn a It Works! site.
+* added ability to list ifconfig for connection within trevorc2 prompt
+
+~~~~~~~~~~~~~~~~
 version 0.9
 ~~~~~~~~~~~~~~~~
 

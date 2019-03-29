@@ -53,6 +53,7 @@ import logging
 import urllib3
 import requests
 import threading
+import subprocess
 try:
     import tornado.web
     import tornado.ioloop
@@ -162,14 +163,19 @@ def clone_site(user_agent, url):
 
     # run our wget
     print("[*] Cloning website: " + url)
-    web_request = requests.get(url, headers={'User-Agent': user_agent}, verify=0)
-    if web_request.status_code != 200 or len(web_request.content) < 1:
-        print("[!] Unable to clone the site. Status Code: %s" % web_request.status_code)
-        print("[!] Exiting TrevorC2...")
-        sys.exit()
+    try:
+        web_request = requests.get(url, headers={'User-Agent': user_agent}, verify=0)
+        if web_request.status_code != 200 or len(web_request.content) < 1:
+            print("[!] Unable to clone the site. Status Code: %s" % web_request.status_code)
+            print("[!] Exiting TrevorC2...")
+            sys.exit()
 
-    with open("clone_site/index.html", 'wb') as fh:
-        fh.write(web_request.content)
+        with open("clone_site/index.html", 'wb') as fh:
+            fh.write(web_request.content)
+
+    except requests.ConnectionError:
+        print("[-] Unable to clone website due to connection issue (are you connected to the Internet?), writing a default one for you...")
+        with open("clone_site/index.html", "w") as fh: fh.write("<head></head><html><body>It Works!</body></html>")
 
     # report success
     if os.path.isfile("clone_site/index.html"):
@@ -338,7 +344,9 @@ if __name__ == "__main__":
                 print("Command Usage:\n")
                 print("list - will list all shells available")
                 print("interact <id> - allow you to select which shells to interact with\n")
+                print("ifconfig - allows you to see your interface data for server")
 
+            # list available shells
             if task == "list":
                 counter = 0
                 print("\n*** Available TrevorC2 Shells Below ***\n")
@@ -353,6 +361,11 @@ if __name__ == "__main__":
                 print("\n")
 
             if task == "interact": print("[!] Correct usage: interact <session_id>")
+
+            if task == "ifconfig":
+                stdout = subprocess.Popen("ifconfig", shell=True)
+                proc = stdout.communicate()[0]
+                print(proc)
 
             if task == "quit" or task == "exit":
                 print("[*] Exiting TrevorC2... ")
