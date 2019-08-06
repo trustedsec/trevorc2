@@ -211,7 +211,9 @@ class UnknownPageHandler(tornado.web.RequestHandler):
         remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
         log.warning('Request to Invalid Page from {}'.format(remote_ip))
         self.set_header('Server', 'IIS')
-        self.write('{"status": "ERROR: Unknown API Endpoint."}\n')
+        site_data = open("clone_site/index.html", "r").read()
+        self.write(site_data)
+        #self.write('{"status": "ERROR: Unknown API Endpoint."}\n')
         return
 
 
