@@ -195,7 +195,7 @@ def clone_site(user_agent, url):
 
     except requests.ConnectionError:
         print("[-] Unable to clone website due to connection issue (are you connected to the Internet?), writing a default one for you...")
-        with open("clone_site/index.html", "w") as fh: fh.write("<head></head><html><body>It Works!</body></html>")
+        with open("clone_site/index.html", "w") as fh: fh.write("<head></head><html><body>1t Works!</body></html>")
 
     # report success
     if os.path.isfile("clone_site/index.html"):
