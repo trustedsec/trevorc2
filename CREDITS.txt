@@ -1,3 +1,5 @@
+Special thanks to Skons for the cookie support
+
 Special thanks to Nicholas Albright @nma_io for the encryption, SSL, threading, multi-shell support.
 
 Special thanks to Alex Williams @offsec_ginger for adding the PowerShell Client module.
