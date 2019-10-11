@@ -149,7 +149,7 @@ trevorc2>exit
 ```
 
 ## Dockerfile
-Uses an alpine-based Dockerfile to deploy trevorC2, handy for quick deployement on cloud providers.  
+Uses an alpine-based Dockerfile to deploy trevorC2, handy for quick deployment on cloud providers.  
 Example below:
 
 ```bash
