@@ -43,7 +43,7 @@ public class trevorc2_client {
     // CONFIG CONSTANTS:
     // site used to communicate with (remote TrevorC2 site)
 
-    private static String SITE_URL = "http://10.10.0.72";
+    private static String SITE_URL = "http://127.0.0.1";
 
     // THIS IS WHAT PATH WE WANT TO HIT FOR CODE - YOU CAN MAKE THIS ANYTHING EXAMPLE: /index.aspx (note you need to change this as well on trevorc2_server)
     private static String ROOT_PATH_QUERY = "/";
