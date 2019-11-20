@@ -5,3 +5,5 @@ Special thanks to Nicholas Albright @nma_io for the encryption, SSL, threading, 
 Special thanks to Alex Williams @offsec_ginger for adding the PowerShell Client module.
 
 ASCII ART Credit: http://www.chris.com/ascii/index.php?art=animals/insects/cockroaches
+
+Special thanks for mainframed for the java client

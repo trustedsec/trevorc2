@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 1.2
+~~~~~~~~~~~~~~~~
+
+* adds a new java client which also works on Z/OS OMVS. (special thanks to mainframed)
+
+~~~~~~~~~~~~~~~~
 version 1.1
 ~~~~~~~~~~~~~~~~
 
