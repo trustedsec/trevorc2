@@ -159,6 +159,11 @@ cd trevorc2
 docker build -t trevorc2 . 
 docker run -it -p 80:80 -p 443:443 trevorc2
 ```
+
+## Variables configuration
+
+It is important to change the variables that are presented in each of the scripts. Especially the SITE_PATH_QUERY and encryption key. I would also recommend looking at the REDIRECT option. Instead of cloning a website, you have another option which will redirect the victim host that may be browsing the site to investigate to the legitimate site. Basically when someone visits the site, it'll just redirect them to the site you want cloned. Change the cloned site from google for example to a different site and turn redirect to ON.
+
 ## TODO
 
 #### Add ability for longer than 2048 data output. Query string parameter length limited size length.

