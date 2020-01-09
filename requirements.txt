@@ -1,3 +1,4 @@
 bleach
 tornado
 pycrypto
+requests
