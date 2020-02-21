@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 1.4.1
+~~~~~~~~~~~~~~~~
+
+* changed encryptedstreams for bypass
+
+~~~~~~~~~~~~~~~~
 version 1.4
 ~~~~~~~~~~~~~~~~
 

