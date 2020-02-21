@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 1.4
+~~~~~~~~~~~~~~~~
+
+* fix redirect when using trevorc2 - would throw error and not properly redirect
+
+~~~~~~~~~~~~~~~~
 version 1.3
 ~~~~~~~~~~~~~~~~
 
