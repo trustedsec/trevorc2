@@ -459,9 +459,13 @@ if __name__ == "__main__":
                             print("[*] Use exit or back to select other shells")
                             while 1:
                                 task = input(hostname + ":trevorc2>")
+                                origtask = task
                                 if task == "quit" or task == "exit" or task == "back": break
                                 task = (hostname + "::::" + task)
                                 set_instruction(sid,task)
+                                if origtask == "killnow":
+                                    print("[*] Killing agent, and dropping from console!")
+                                    break;
                                 print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
                                 while 1:
                                     # we received a hit with our command
