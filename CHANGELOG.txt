@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 1.4.2
+~~~~~~~~~~~~~~~~
+
+* add invalid syntax prompt in trevor_server
+
+~~~~~~~~~~~~~~~~
 version 1.4.1
 ~~~~~~~~~~~~~~~~
 
