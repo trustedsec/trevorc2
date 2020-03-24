@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 TrevorC2 - legitimate looking command and control.
 
@@ -442,7 +442,6 @@ if __name__ == "__main__":
                 print("[*] Exiting TrevorC2... ")
                 os.system('kill $PPID') # This is an ugly method to kill process, due to threading this is a quick hack to kill with control-c. Will fix later.
 
-
             if "interact " in task:
                 if assets != []:
                     hostname_sessionid = task.split(" ")[1]
@@ -479,6 +478,9 @@ if __name__ == "__main__":
                          print("[!] Session id {} is not a valid session id.".format(hostname_sessionid))
                 else:
                     print("[!] No sessions have been established to execute commands.")
+
+            else:
+                print("[!] Command not recognized. Type help for more information.")
 
     # cleanup when using keyboardinterrupt
     except KeyboardInterrupt:
