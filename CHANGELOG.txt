@@ -1,4 +1,10 @@
 ~~~~~~~~~~~~~~~~
+version 1.4.3
+~~~~~~~~~~~~~~~~
+
+* fix invalid syntax command prompt
+
+~~~~~~~~~~~~~~~~
 version 1.4.2
 ~~~~~~~~~~~~~~~~
 

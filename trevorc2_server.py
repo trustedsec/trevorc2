@@ -419,7 +419,7 @@ if __name__ == "__main__":
                 print("ifconfig - allows you to see your interface data for server")
 
             # list available shells
-            if task == "list":
+            elif task == "list":
                 counter = 0
                 print("\n*** Available TrevorC2 Shells Below ***\n")
                 if assets == []:
@@ -431,18 +431,18 @@ if __name__ == "__main__":
                         print(str(counter) + ". " + a['hostname'] + " " + a['remoteip'] + " " + a['sessionid']  + " (Trevor C2 Established)")
                 print("\n")
 
-            if task == "interact": print("[!] Correct usage: interact <session_id>")
+            elif task == "interact": print("[!] Correct usage: interact <session_id>")
 
-            if task == "ifconfig":
+            elif task == "ifconfig":
                 stdout = subprocess.Popen("ifconfig", shell=True)
                 proc = stdout.communicate()[0]
                 print(proc)
 
-            if task == "quit" or task == "exit":
+            elif task == "quit" or task == "exit":
                 print("[*] Exiting TrevorC2... ")
                 os.system('kill $PPID') # This is an ugly method to kill process, due to threading this is a quick hack to kill with control-c. Will fix later.
 
-            if "interact " in task:
+            elif "interact " in task:
                 if assets != []:
                     hostname_sessionid = task.split(" ")[1]
                     try:
@@ -480,7 +480,8 @@ if __name__ == "__main__":
                     print("[!] No sessions have been established to execute commands.")
 
             else:
-                print("[!] Command not recognized. Type help for more information.")
+                if task !="":
+                    print("[!] Command not recognized. Type help for more information.")
 
     # cleanup when using keyboardinterrupt
     except KeyboardInterrupt:
