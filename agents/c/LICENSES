@@ -1,0 +1,12 @@
+Following c code used in the trevor_c2 C agent.
+
+https://github.com/littlstar/b64.c.git
+    - b64.h
+    - encode.c
+    - decode.c
+https://github.com/B-Con/crypto-algorithms.git
+    - sha256.h
+    - sha256.c
+https://github.com/kokke/tiny-AES-c.git
+    - aes.c
+    - aes.h
