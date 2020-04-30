@@ -3,7 +3,7 @@ version 2.0
 ~~~~~~~~~~~~~~~~
 
 * number of enhancements and features
-* added new C-based cross-compatible agent works on Nix/OSX/Windows
+* added new C-based cross-compatible agent works on Nix/OSX/Windows (thanks Kevin!)
 
 ~~~~~~~~~~~~~~~~
 version 1.4.3
