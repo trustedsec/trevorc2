@@ -87,7 +87,13 @@ char* b64_encode(const unsigned char* src, size_t len)
 
     // Make sure we have enough space to add '\0' character at end.
     enc = (char*)b64_realloc(enc, size + 1);
-    enc[size] = '\0';
+    /* NOTE: Changes from original source */
+    if (NULL != enc) {
+        enc[size] = '\0';
+    } else {
+        return NULL;
+    }
+    /* NOTE: End changes from the original */
 
     return enc;
 }

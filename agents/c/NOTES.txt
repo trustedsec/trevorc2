@@ -4,3 +4,11 @@
 
 ## State
 Works on linux/windows, need to test and/or modify on mac.
+
+## Clang-Format
+
+Note on how to run clang-format over this code. I'm sure theres a better way, but this is how I'm doing it.
+
+```sh
+find ./ -iname "*.c" -exec clang-format -i {} \;
+```

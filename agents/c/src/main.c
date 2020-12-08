@@ -321,10 +321,9 @@ unsigned char* doTasking(unsigned char* command, int* outSize)
     while (1) {
         tempshelldata = realloc(shelldata, fullReadSize + 2048 + 1);
         if (tempshelldata == NULL) {
-            break;
-        }
-        if (tempshelldata == NULL) {
             free(shelldata);
+            shelldata = NULL;
+            break;
         }
         shelldata = tempshelldata;
         memset(shelldata + fullReadSize, 0, 2048 + 1);
