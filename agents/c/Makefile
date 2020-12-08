@@ -1,23 +1,35 @@
-CC:=gcc
+# GENERAL
+SOURCE := $(wildcard ./src/*)
+INCLUDE := ./include
+BINARY := tc2_client
+# POSIX
+CC := gcc
+POSIX_SOURCE := $(wildcard ./posix_src/*)
+# WINDOWS
+CC_WINDOWS := x86_64-w64-mingw32-gcc
+LDFLAGS_WINDOWS := ws2_32
+WINDOWS_SOURCE := $(POSIX_SOURCE)
 
 all: win posix
 
 debug: wind posixd
 
 win:
-	x86_64-w64-mingw32-gcc -Wall -I ./include/ -mwindows -DWIN_MAIN src/main.c src/crypto.c src/aes.c src/encode.c src/decode.c src/sha256.c posix_src/http.c -lws2_32 -o ./tc2_agent.exe
+	$(CC_WINDOWS) -s -Wall -I $(INCLUDE) -mwindows -DWIN_MAIN $(SOURCE) $(WINDOWS_SOURCE) -l$(LDFLAGS_WINDOWS) -o ./$(BINARY).exe
 
 wind:
-	x86_64-w64-mingw32-gcc -g -Wall -DDEBUG -I ./include/ src/main.c src/crypto.c src/aes.c src/encode.c src/decode.c src/sha256.c posix_src/http.c -lws2_32 -o ./tc2_agent.exe
+	$(CC_WINDOWS) -g -Wall -DDEBUG -I $(INCLUDE) $(SOURCE) $(WINDOWS_SOURCE) -l$(LDFLAGS_WINDOWS) -o ./$(BINARY).exe
 
 posix:
-	gcc -Wall -I ./include/ src/main.c src/crypto.c src/aes.c src/encode.c src/decode.c src/sha256.c posix_src/http.c -o ./tc2_agent.out
+	$(CC) -s -Wall -I $(INCLUDE) $(SOURCE) $(POSIX_SOURCE) -o ./$(BINARY).out
 
 posixd:
-	gcc -Wall -g -I ./include/ -DDEBUG src/main.c src/crypto.c src/aes.c src/encode.c src/decode.c src/sha256.c posix_src/http.c -o ./tc2_agent.out
+	$(CC) -Wall -g -I $(INCLUDE) -DDEBUG $(SOURCE) $(POSIX_SOURCE) -o ./$(BINARY).out
 
 scanbuild:
-	$(CC) -I ./include/ src/main.c src/crypto.c src/aes.c src/encode.c src/decode.c src/sha256.c posix_src/http.c -o ./tc2_agent.out
+	$(CC) -I $(INCLUDE) $(SOURCE) $(POSIX_SOURCE) -o ./$(BINARY).out
 
 clean:
-	rm -f tc2_agent.*
+	rm -f $(BINARY).*
+
+.PHONY: all debug win wind posix posixd scanbuild clean
