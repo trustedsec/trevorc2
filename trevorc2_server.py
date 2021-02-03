@@ -95,7 +95,7 @@ logging.basicConfig(level=logging.CRITICAL, format='[%(asctime)s] %(message)s', 
 log = logging.getLogger(__name__)
 
 __author__ = 'Dave Kennedy (@HackingDave)'
-__version__ = 0.71
+__version__ = 2.1
 
 # ROOT CHECK
 if os.geteuid() != 0:

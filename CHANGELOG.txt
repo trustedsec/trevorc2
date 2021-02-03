@@ -1,4 +1,14 @@
 ~~~~~~~~~~~~~~~~
+version 2.1
+~~~~~~~~~~~~~~~~
+
+* Added the cmd prompt library so that we have autocomplete on commands using tab as well as history (arrow up/down).
+* -- Also help is added to each command so you can type help (Also tab complete)
+* Added servercmd as menu option to run commands on Trevor Server instead of ifconfig
+* Converted agents into proper class objects and agentlistclass to add them into a userlist
+* Updated the Readme.md
+
+~~~~~~~~~~~~~~~~
 version 2.0
 ~~~~~~~~~~~~~~~~
 
