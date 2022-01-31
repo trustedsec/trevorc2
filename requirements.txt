@@ -1,4 +1,4 @@
 bleach
 tornado
-pycrypto
+pycryptodome
 requests
